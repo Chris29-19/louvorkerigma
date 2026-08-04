@@ -240,7 +240,6 @@ export class SongModel {
 
     static async createRepertorio(id, periodo) {
         const repertorio = {
-            id,
             periodo,
             quarta: { adoracao: [], oferta: [], louvor: [] },
             sabado: { adoracao: [], oferta: [], louvor: [] },
@@ -250,7 +249,8 @@ export class SongModel {
             ceiaAtivo: false,
             criadoEm: new Date().toISOString()
         };
-        return await dbOperations.add(STORE_REPERTORIO, repertorio);
+        await dbOperations.setById(STORE_REPERTORIO, id, { id, ...repertorio });
+        return id;
     }
 
     static async updateRepertorio(periodoId, updates) {

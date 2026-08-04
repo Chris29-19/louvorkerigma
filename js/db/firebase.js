@@ -45,6 +45,11 @@ export const dbOperations = {
         await db.collection(collectionName).doc(id).delete();
     },
 
+    async setById(collectionName, id, data) {
+        const { id: _id, ...rest } = data;
+        await db.collection(collectionName).doc(id).set(rest);
+    },
+
     async clear(collectionName) {
         const snapshot = await db.collection(collectionName).get();
         const batch = db.batch();

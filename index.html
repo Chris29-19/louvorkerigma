@@ -157,15 +157,21 @@
                 <div class="repertorio-header">
                     <div class="periodo-selector">
                         <i class="ph ph-calendar"></i>
-                        <input type="date" id="periodoDatePicker" class="date-picker-input">
+                        <input type="date" id="periodoDataInicio" class="date-picker-input" title="Data inicial">
+                        <span class="date-separator">a</span>
+                        <input type="date" id="periodoDataFim" class="date-picker-input" title="Data final">
+                        <button class="btn btn-primary btn-sm" id="btnCriarPeriodo" title="Criar período">
+                            <i class="ph ph-check"></i>
+                        </button>
+                    </div>
+                    <div class="periodo-right">
                         <select id="periodoSelect" class="periodo-existing-select">
                             <option value="">Períodos salvos</option>
                         </select>
+                        <button class="btn btn-primary btn-share" id="btnCompartilhar">
+                            <i class="ph ph-whatsapp-logo"></i>
+                        </button>
                     </div>
-                    <button class="btn btn-primary btn-share" id="btnCompartilhar">
-                        <i class="ph ph-whatsapp-logo"></i>
-                        <span>Compartilhar</span>
-                    </button>
                 </div>
 
                 <!-- Sub-abas dos Dias -->

@@ -89,8 +89,9 @@ export class MainController {
             onYoutubeOpenApp: this.handleYoutubeOpenApp.bind(this),
             onViewLyrics: this.handleViewLyrics.bind(this),
             onPeriodoChange: this.handlePeriodoChange.bind(this),
-            onDatePickerChange: this.handleDatePickerChange.bind(this),
+            onCriarPeriodo: this.handleCriarPeriodo.bind(this),
             onCompartilhar: this.handleCompartilhar.bind(this),
+            onShowToast: (msg, type) => showToast(msg, type),
             onToggleChange: this.handleToggleChange.bind(this),
             onAddSongRepertorio: this.handleAddSongRepertorio.bind(this),
             onRemoveSongRepertorio: this.handleRemoveSongRepertorio.bind(this),
@@ -1012,20 +1013,7 @@ export class MainController {
         }
     }
 
-    handleDatePickerChange(dateStr) {
-        // dateStr está no formato YYYY-MM-DD
-        const selected = new Date(dateStr + 'T12:00:00');
-        const diaSemana = selected.getDay();
-
-        // Calcula segunda-feira da semana
-        const diffSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
-        const segunda = new Date(selected);
-        segunda.setDate(selected.getDate() + diffSegunda);
-
-        // Calcula sexta-feira
-        const sexta = new Date(segunda);
-        sexta.setDate(segunda.getDate() + 4);
-
+    handleCriarPeriodo(inicioStr, fimStr) {
         const formatarData = (d) => {
             const dia = String(d.getDate()).padStart(2, '0');
             const mes = String(d.getMonth() + 1).padStart(2, '0');
@@ -1040,8 +1028,16 @@ export class MainController {
             return `${dia}-${mes}-${ano}`;
         };
 
-        const periodo = `De ${formatarData(segunda)} a ${formatarData(sexta)}`;
-        const id = `${formatarDataId(segunda)}_${formatarDataId(sexta)}`;
+        const inicio = new Date(inicioStr + 'T12:00:00');
+        const fim = new Date(fimStr + 'T12:00:00');
+
+        if (fim < inicio) {
+            showToast("A data final deve ser após a data inicial", "error");
+            return;
+        }
+
+        const periodo = `De ${formatarData(inicio)} a ${formatarData(fim)}`;
+        const id = `${formatarDataId(inicio)}_${formatarDataId(fim)}`;
 
         this._criarOuCarregarPeriodo(id, periodo);
     }

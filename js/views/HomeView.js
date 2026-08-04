@@ -29,7 +29,9 @@ export class HomeView {
 
         // Repertório da Semana
         this.periodoSelect = document.getElementById('periodoSelect');
-        this.periodoDatePicker = document.getElementById('periodoDatePicker');
+        this.periodoDataInicio = document.getElementById('periodoDataInicio');
+        this.periodoDataFim = document.getElementById('periodoDataFim');
+        this.btnCriarPeriodo = document.getElementById('btnCriarPeriodo');
         this.btnCompartilhar = document.getElementById('btnCompartilhar');
         this.subTabBtns = document.querySelectorAll('.sub-tab-btn');
         this.subTabPanels = document.querySelectorAll('.sub-tab-panel');
@@ -235,12 +237,15 @@ export class HomeView {
                 }
             });
         }
-        if (this.periodoDatePicker) {
-            this.periodoDatePicker.addEventListener('change', () => {
-                const selectedDate = this.periodoDatePicker.value;
-                if (selectedDate) {
-                    handlers.onDatePickerChange(selectedDate);
+        if (this.btnCriarPeriodo) {
+            this.btnCriarPeriodo.addEventListener('click', () => {
+                const inicio = this.periodoDataInicio?.value;
+                const fim = this.periodoDataFim?.value;
+                if (!inicio || !fim) {
+                    handlers.onShowToast('Selecione as datas inicial e final', 'error');
+                    return;
                 }
+                handlers.onCriarPeriodo(inicio, fim);
             });
         }
         if (this.btnCompartilhar) {
