@@ -1,0 +1,266 @@
+/* css/mobile-test.css - Layout compacto para teste (desktop + mobile) */
+
+/* === DESKTOP — mesmo layout compacto === */
+
+/* Esconde a coluna # */
+.col-index {
+    display: none !important;
+}
+
+/* Esconde ações originais — serão reposicionadas no admin */
+.table-grid-layout .col-actions {
+    display: none !important;
+}
+
+/* === GRID NORMAL — 4 colunas === */
+.table-grid-layout {
+    grid-template-columns: 1fr 90px 52px 42px !important;
+    grid-auto-rows: auto;
+    align-items: center;
+    gap: 0 6px;
+    padding: 10px 12px !important;
+}
+
+/* Título — coluna 1, linha 1 */
+.col-title {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    font-size: 0.95rem;
+}
+
+/* Artista — coluna 1, linha 2 */
+.col-artist {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: 0.75rem !important;
+    color: var(--color-text-muted) !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Colunas ao lado — ocupam as 2 linhas */
+.col-vocal {
+    grid-column: 2;
+    grid-row: 1 / 3;
+}
+
+.col-key {
+    grid-column: 3;
+    grid-row: 1 / 3;
+    text-align: center;
+}
+
+.col-youtube {
+    grid-column: 4;
+    grid-row: 1 / 3;
+}
+
+/* === Cabeçalhos — alinhamento com conteúdo === */
+.table-header {
+    grid-template-columns: 1fr 90px 52px 42px !important;
+    padding: 8px 12px !important;
+    gap: 0 6px !important;
+    font-size: 0.65rem !important;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--color-border);
+    background-color: var(--color-table-header-bg);
+    color: var(--color-table-header-text);
+}
+
+.table-header .col-index {
+    display: none !important;
+}
+
+.table-header .col-title {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 0.65rem;
+}
+
+.table-header .col-vocal {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: left;
+    font-size: 0.65rem;
+}
+
+.table-header .col-key {
+    grid-column: 3;
+    grid-row: 1;
+    text-align: center;
+    font-size: 0.65rem;
+}
+
+.table-header .col-youtube {
+    grid-column: 4;
+    grid-row: 1;
+    text-align: left;
+    font-size: 0.65rem;
+}
+
+/* Remove rolagem horizontal */
+.table-responsive-wrapper {
+    overflow-x: visible !important;
+}
+
+.songs-list-wrapper {
+    min-width: 0 !important;
+}
+
+/* Borda entre músicas */
+.song-item {
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 0;
+}
+
+.song-item:last-child {
+    border-bottom: none;
+}
+
+/* Vocal selector compacto */
+.vocal-selector .ph-caret-down {
+    font-size: 0.65rem !important;
+}
+
+/* Botão YouTube menor */
+.btn-youtube {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 1.1rem !important;
+}
+
+/* Contagem de músicas */
+.section-header {
+    padding: 0 4px;
+}
+
+/* =========================================================
+   ADMIN MODE — ⋮ some, ações aparecem abaixo da música
+   ========================================================= */
+body.admin-mode .song-item {
+    grid-template-columns: 1fr 90px 52px 42px !important;
+}
+
+/* Esconde ⋮ no admin */
+body.admin-mode .col-more-actions {
+    display: none !important;
+}
+
+/* Mostra as ações originais e posiciona abaixo da música */
+body.admin-mode .col-actions {
+    display: flex !important;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 6px 0 2px 0;
+    border-top: none;
+}
+
+body.admin-mode .song-actions {
+    display: flex !important;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+body.admin-mode .col-actions .btn-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 0.85rem;
+}
+
+/* === BOTÃO 3 PONTINHOS (⋮) — só normal === */
+.col-more-actions {
+    display: none !important;
+}
+
+body:not(.admin-mode) .col-more-actions {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-more-actions {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--color-text-secondary);
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    transition: background var(--transition-fast);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-more-actions:hover,
+.btn-more-actions:active {
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+}
+
+/* Menu dropdown dos 3 pontinhos — abre para CIMA */
+.more-actions-dropdown {
+    position: fixed;
+    z-index: 9999;
+    min-width: 160px;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-3);
+    overflow: hidden;
+    animation: menuFadeIn 0.15s ease-out;
+}
+
+@keyframes menuFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.more-actions-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: background 0.1s ease;
+    white-space: nowrap;
+}
+
+.more-actions-option i {
+    font-size: 1rem;
+    width: 18px;
+    text-align: center;
+}
+
+.more-actions-option:hover,
+.more-actions-option:active {
+    background: var(--color-brand-primary);
+    color: #fff;
+}
+
+.more-actions-option.danger {
+    color: var(--color-danger, #ef4444);
+}
+
+.more-actions-option.danger:hover,
+.more-actions-option.danger:active {
+    background: var(--color-danger, #ef4444);
+    color: #fff;
+}
+
+.more-actions-divider {
+    height: 1px;
+    background: var(--color-border);
+    margin: 0;
+}

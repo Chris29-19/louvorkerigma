@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch YouTube - LouvorApp</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        p.sub {
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            margin-bottom: 16px;
+        }
+        #status {
+            font-size: 0.9rem;
+            color: #475569;
+            margin-bottom: 12px;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        .progress-bar div {
+            height: 100%;
+            width: 0%;
+            background: #6366f1;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        #log {
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        #log .success { color: #10b981; }
+        #log .skip { color: #94a3b8; }
+        #log .error { color: #ef4444; }
+        #log .info { color: #38bdf8; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            background: #6366f1;
+            color: #fff;
+        }
+        .btn:hover { background: #4f46e5; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .summary-item {
+            text-align: center;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        .summary-item .num {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .summary-item .label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+        .summary-item.green .num { color: #10b981; }
+        .summary-item.gray .num { color: #94a3b8; }
+        .summary-item.red .num { color: #ef4444; }
+        .summary-item.blue .num { color: #6366f1; }
+    </style>
+</head>
+<body>
+    <h1>🎵 Preencher Links do YouTube</h1>
+    <p class="sub">Busca automaticamente vídeos no YouTube para todas as músicas sem link.</p>
+
+    <div class="card">
+        <div id="status">Pronto. Conectando ao Firebase...</div>
+        <div class="summary" id="summary">
+            <div class="summary-item blue">
+                <div class="num" id="countTotal">0</div>
+                <div class="label">Total</div>
+            </div>
+            <div class="summary-item gray">
+                <div class="num" id="countSkip">0</div>
+                <div class="label">Já tinham</div>
+            </div>
+            <div class="summary-item green">
+                <div class="num" id="countSuccess">0</div>
+                <div class="label">Encontrados</div>
+            </div>
+            <div class="summary-item red">
+                <div class="num" id="countFail">0</div>
+                <div class="label">Não encontrados</div>
+            </div>
+        </div>
+        <div class="progress-bar"><div id="progressFill"></div></div>
+        <button class="btn" id="btnStart" disabled>▶ Iniciar busca</button>
+    </div>
+
+    <div id="log"></div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDUvO-ZJEFhkxzpECQKeX_qeo-G-6HA0LE",
+            authDomain: "repertoriolouvor-15903.firebaseapp.com",
+            projectId: "repertoriolouvor-15903",
+            storageBucket: "repertoriolouvor-15903.firebasestorage.app",
+            messagingSenderId: "522673027448",
+            appId: "1:522673027448:web:3123f18da211970f7c708d",
+            measurementId: "G-9459LGK83F"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const STORE_SONGS = 'songs';
+        const STORE_SETTINGS = 'appSettings';
+
+        let songs = [];
+        let apiKey = '';
+        let running = false;
+        let counts = { total: 0, skip: 0, success: 0, fail: 0 };
+
+        const $ = id => document.getElementById(id);
+        const log = document.getElementById('log');
+
+        function addLog(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = msg;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateStatus(text) {
+            $('status').textContent = text;
+        }
+
+        function updateCounts() {
+            $('countTotal').textContent = counts.total;
+            $('countSkip').textContent = counts.skip;
+            $('countSuccess').textContent = counts.success;
+            $('countFail').textContent = counts.fail;
+            const done = counts.skip + counts.success + counts.fail;
+            const pct = counts.total > 0 ? (done / counts.total * 100) : 0;
+            $('progressFill').style.width = pct + '%';
+        }
+
+        async function init() {
+            try {
+                const settingsDoc = await db.collection(STORE_SETTINGS).doc('main').get();
+                if (settingsDoc.exists) {
+                    apiKey = settingsDoc.data().youtubeApiKey || '';
+                }
+                if (!apiKey) {
+                    addLog('❌ Nenhuma chave de API YouTube encontrada nas configurações.', 'error');
+                    updateStatus('Erro: configure a chave da API YouTube no admin do app.');
+                    return;
+                }
+                addLog('✅ Chave da API YouTube carregada.', 'success');
+
+                const snapshot = await db.collection(STORE_SONGS).get();
+                songs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                counts.total = songs.length;
+                updateCounts();
+                addLog(`✅ ${songs.length} músicas carregadas do Firestore.`, 'success');
+
+                const hasLink = songs.filter(s => s.youtubeUrl).length;
+                const noLink = songs.filter(s => !s.youtubeUrl).length;
+                addLog(`📊 ${hasLink} já têm link · ${noLink} sem link`, 'info');
+
+                $('btnStart').disabled = false;
+                updateStatus(`${songs.length} músicas encontradas. ${noLink} precisam de busca.`);
+            } catch (err) {
+                addLog('❌ Erro ao conectar: ' + err.message, 'error');
+                updateStatus('Erro de conexão: ' + err.message);
+            }
+        }
+
+        async function searchYouTube(query) {
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${apiKey}&maxResults=1&type=video&relevanceLanguage=pt`;
+            const resp = await fetch(url);
+            if (resp.status === 429) return { quotaExceeded: true };
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            if (data.items && data.items.length > 0) {
+                const videoId = data.items[0].id.videoId;
+                return `https://www.youtube.com/watch?v=${videoId}`;
+            }
+            return null;
+        }
+
+        async function run() {
+            if (running) return;
+            running = true;
+            $('btnStart').disabled = true;
+            $('btnStart').textContent = '⏳ Buscando...';
+
+            counts.skip = 0;
+            counts.success = 0;
+            counts.fail = 0;
+            log.innerHTML = '';
+            updateCounts();
+
+            const toSearch = songs.filter(s => !s.youtubeUrl);
+            const alreadyHave = songs.filter(s => s.youtubeUrl);
+            const totalToSearch = toSearch.length;
+            counts.skip = alreadyHave.length;
+            updateCounts();
+
+            addLog(`🔄 ${totalToSearch} músicas para buscar...`, 'info');
+
+            for (let i = 0; i < toSearch.length; i++) {
+                const song = toSearch[i];
+                const query = song.title + (song.artist ? ' ' + song.artist : '');
+                const label = `[${i + 1}/${totalToSearch}] ${song.title}`;
+
+                if (song.youtubeUrl) {
+                    counts.skip++;
+                    addLog(`⏭ ${label} — já tinha link`, 'skip');
+                    updateCounts();
+                    continue;
+                }
+
+                try {
+                    await new Promise(r => setTimeout(r, 350));
+                    const result = await searchYouTube(query);
+                    if (result && result.quotaExceeded) {
+                        addLog(`🚫 COTA DA API EXCEDIDA! Gere uma nova chave e rode de novo.`, 'error');
+                        updateStatus('Cota excedida! Gere nova chave de API no Google Cloud.');
+                        break;
+                    }
+                    if (result) {
+                        await db.collection(STORE_SONGS).doc(song.id).update({ youtubeUrl: result });
+                        counts.success++;
+                        addLog(`✅ ${label} — ${result}`, 'success');
+                    } else {
+                        counts.fail++;
+                        addLog(`❌ ${label} — nenhum resultado`, 'error');
+                    }
+                } catch (err) {
+                    counts.fail++;
+                    addLog(`⚠️ ${label} — erro: ${err.message}`, 'error');
+                }
+                updateCounts();
+            }
+
+            running = false;
+            $('btnStart').disabled = false;
+            $('btnStart').textContent = '▶ Iniciar busca';
+            addLog(`📊 Resultado: ${counts.success} encontrados, ${counts.fail} falhas, ${counts.skip} já tinham.`, 'info');
+        }
+
+        $('btnStart').addEventListener('click', run);
+        init();
+    </script>
+</body>
+</html>

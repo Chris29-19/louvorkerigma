@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#F8FAFC">
+    <title>LouvorApp - Teste Mobile</title>
+    <meta name="description" content="Versão teste com layout mobile para gerenciamento de repertório.">
+    
+    <!-- Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons: Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/mobile-test.css">
+    <!-- SheetJS for Excel Import -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-brand" id="headerBrand">
+                <img id="brandLogoImg" src="" alt="Logo do Ministério" style="display: none; max-height: 40px; border-radius: 4px;">
+                <i class="ph-fill ph-music-notes" id="brandLogoIcon"></i>
+                <h1 id="brandTitle">LouvorApp</h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" id="btnAdmin" aria-label="Administração">
+                    <i class="ph ph-gear"></i>
+                </button>
+                <button class="btn-icon" id="btnThemeToggle" aria-label="Alternar Tema">
+                    <i class="ph ph-moon"></i>
+                </button>
+                <button class="btn btn-primary btn-icon admin-only" id="btnAddSong" aria-label="Adicionar Música">
+                    <i class="ph ph-plus"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            
+            <!-- Abas de Navegação -->
+            <div class="tabs-nav">
+                <button class="tab-btn active" data-tab="tab-adoracao" id="tabBtnAdoracao">
+                    <i class="ph ph-hand-heart"></i>
+                    <span>Adoração</span>
+                </button>
+                <button class="tab-btn" data-tab="tab-louvor" id="tabBtnLouvor">
+                    <i class="ph ph-music-notes"></i>
+                    <span>Louvor</span>
+                </button>
+                <button class="tab-btn" data-tab="tab-busca" id="tabBtnBusca">
+                    <i class="ph ph-funnel"></i>
+                    <span>Busca</span>
+                </button>
+            </div>
+
+            <!-- Aba 1: Adoração -->
+            <div class="tab-panel active" id="tab-adoracao">
+                <div class="search-bar-simple">
+                    <i class="ph ph-magnifying-glass"></i>
+                    <input type="text" id="searchInputAdoracao" placeholder="Pesquisar música...">
+                </div>
+                <div class="section-header">
+                    <h2>Adoração</h2>
+                    <span class="song-count" id="adoracaoCount">0 músicas</span>
+                </div>
+                <div class="table-responsive-wrapper">
+                    <div class="songs-list-wrapper">
+                        <div class="table-header">
+                            <div class="col-title">Música</div>
+                            <div class="col-vocal">Vocalista</div>
+                            <div class="col-key">Tom</div>
+                            <div class="col-youtube">YouTube</div>
+                        </div>
+                        <div class="songs-list" id="songsListAdoracao"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aba 2: Louvor -->
+            <div class="tab-panel" id="tab-louvor">
+                <div class="search-bar-simple">
+                    <i class="ph ph-magnifying-glass"></i>
+                    <input type="text" id="searchInputLouvor" placeholder="Pesquisar música...">
+                </div>
+                <div class="section-header">
+                    <h2>Louvor</h2>
+                    <span class="song-count" id="louvorCount">0 músicas</span>
+                </div>
+                <div class="table-responsive-wrapper">
+                    <div class="songs-list-wrapper">
+                        <div class="table-header">
+                            <div class="col-title">Música</div>
+                            <div class="col-vocal">Vocalista</div>
+                            <div class="col-key">Tom</div>
+                            <div class="col-youtube">YouTube</div>
+                        </div>
+                        <div class="songs-list" id="songsListLouvor"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aba 3: Busca com Filtros -->
+            <div class="tab-panel" id="tab-busca">
+                <div class="search-bar">
+                    <i class="ph ph-magnifying-glass"></i>
+                    <input type="text" id="searchInputFilter" placeholder="Buscar por título ou trecho da letra...">
+                </div>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="filterCategory">Categoria</label>
+                        <select id="filterCategory">
+                            <option value="">Todas</option>
+                            <option value="adoracao">Adoração</option>
+                            <option value="louvor">Louvor</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterArtist">Cantor/Banda</label>
+                        <select id="filterArtist">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterVocal">Vocalista</label>
+                        <select id="filterVocal">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterKey">Tom</label>
+                        <select id="filterKey">
+                            <option value="">Todos</option>
+                            <option value="C">C</option>
+                            <option value="C#">C#</option>
+                            <option value="Db">Db</option>
+                            <option value="D">D</option>
+                            <option value="Eb">Eb</option>
+                            <option value="E">E</option>
+                            <option value="F">F</option>
+                            <option value="F#">F#</option>
+                            <option value="G">G</option>
+                            <option value="Ab">Ab</option>
+                            <option value="A">A</option>
+                            <option value="Bb">Bb</option>
+                            <option value="B">B</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="section-header" style="margin-top: var(--spacing-4);">
+                    <h2>Resultados</h2>
+                    <span class="song-count" id="filterSongCount">0 músicas</span>
+                </div>
+                <div class="table-responsive-wrapper">
+                    <div class="songs-list-wrapper">
+                        <div class="table-header">
+                            <div class="col-title">Música</div>
+                            <div class="col-vocal">Vocalista</div>
+                            <div class="col-key">Tom</div>
+                            <div class="col-youtube">YouTube</div>
+                        </div>
+                        <div class="songs-list" id="songsListFilter"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Modal Formulário de Música -->
+        <div class="modal-overlay" id="songModal" aria-hidden="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Nova Música</h2>
+                    <button class="btn-icon close-modal" id="btnCloseModal" aria-label="Fechar">
+                        <i class="ph ph-x"></i>
+                    </button>
+                </div>
+                <form id="songForm" class="song-form">
+                    <input type="hidden" id="songId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="songTitle">Título *</label>
+                            <input type="text" id="songTitle" required placeholder="Ex: Quebrantado">
+                        </div>
+                        <div class="form-group">
+                            <label for="songCategory">Categoria *</label>
+                            <select id="songCategory" required>
+                                <option value="adoracao">Adoração</option>
+                                <option value="louvor">Louvor</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="songArtist">Cantor/Banda (Original) *</label>
+                            <input type="text" id="songArtist" required placeholder="Ex: Vineyard">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: block;">Tons por Vocalista</label>
+                        <div id="vocalConfigsList" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
+                        <button type="button" class="btn btn-secondary" id="btnAddVocalConfig" style="width:100%; font-size:0.8rem; padding:6px;">
+                            <i class="ph ph-plus" style="margin-right:4px;"></i> Adicionar vocalista
+                        </button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="songLyrics">Letra / Observações</label>
+                        <textarea id="songLyrics" rows="4" placeholder="Cole a letra ou cifra aqui..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="songYoutube">Link do YouTube</label>
+                        <div style="display:flex; gap:6px;">
+                            <input type="text" id="songYoutube" placeholder="https://www.youtube.com/watch?v=...">
+                            <button type="button" class="btn btn-secondary" id="btnSearchYoutube" title="Buscar no YouTube" style="flex-shrink:0; padding:6px 12px; font-size:0.8rem;">
+                                <i class="ph ph-magnifying-glass"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="btnCancelSong">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Música</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    <!-- Modal Player YouTube -->
+    <div class="modal-overlay" id="youtubeModal" aria-hidden="true">
+        <div class="modal-content youtube-modal-content">
+            <div class="modal-header">
+                <h2 id="youtubePlayerTitle">YouTube</h2>
+                <button class="btn-icon close-modal" id="btnCloseYoutube" aria-label="Fechar">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="youtube-player-wrapper">
+                <iframe id="youtubePlayerFrame" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCloseYoutubePlayer">Fechar</button>
+                <button type="button" class="btn btn-primary" id="btnOpenYoutubeApp">
+                    <i class="ph ph-arrow-square-out"></i> Abrir no App YouTube
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Senha Admin -->
+    <div class="modal-overlay" id="authModal" aria-hidden="true">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Acesso Restrito</h2>
+                <button class="btn-icon close-modal" id="btnCloseAuth" aria-label="Fechar">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <form id="authForm">
+                <div class="form-group">
+                    <label for="adminPassword">Senha de Administrador</label>
+                    <input type="password" id="adminPassword" required placeholder="Digite a senha">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btnCancelAuth">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Entrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Painel Admin -->
+    <div class="modal-overlay" id="adminPanelModal" aria-hidden="true">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Painel de Controle</h2>
+                <button class="btn-icon close-modal" id="btnCloseAdminPanel" aria-label="Fechar">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="form-group">
+                <label style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; display: block;">Dados & Backup</label>
+                
+                <div class="form-group" style="margin-bottom: var(--spacing-3);">
+                    <label for="importCategory" style="font-size: 0.75rem;">Importar planilha para:</label>
+                    <select id="importCategory">
+                        <option value="louvor">Louvor</option>
+                        <option value="adoracao">Adoração</option>
+                    </select>
+                </div>
+
+                <input type="file" id="fileImportExcel" accept=".xlsx, .xls, .csv" style="display: none;">
+                <button class="btn btn-secondary" id="btnImportExcel" style="width: 100%; margin-bottom: var(--spacing-3);">
+                    <i class="ph ph-file-xls" style="margin-right: 8px;"></i> Importar Planilha Excel
+                </button>
+
+                <button class="btn btn-primary" id="btnExportData" style="width: 100%; margin-bottom: var(--spacing-3);">
+                    <i class="ph ph-download-simple" style="margin-right: 8px;"></i> Exportar Backup (JSON)
+                </button>
+                
+                <input type="file" id="fileImportData" accept=".json" style="display: none;">
+                <button class="btn btn-secondary" id="btnImportData" style="width: 100%; margin-bottom: var(--spacing-5);">
+                    <i class="ph ph-upload-simple" style="margin-right: 8px;"></i> Importar Backup (JSON)
+                </button>
+                
+                <hr style="border: 0; border-top: 1px solid var(--color-border); margin: var(--spacing-4) 0;">
+
+                <label style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; display: block;">Mudar Logomarca</label>
+                <input type="file" id="fileLogoUpload" accept="image/png, image/jpeg" style="display: none;">
+                <button class="btn btn-secondary" id="btnUploadLogo" style="width: 100%;">
+                    <i class="ph ph-image" style="margin-right: 8px;"></i> Enviar Nova Imagem
+                </button>
+                <button class="btn btn-danger" id="btnRemoveLogo" style="width: 100%; margin-top: 8px; display: none;">
+                    Remover Imagem
+                </button>
+                
+                <hr style="border: 0; border-top: 1px solid var(--color-border); margin: var(--spacing-4) 0;">
+
+                <label style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; display: block;">Cores do Tema</label>
+                <div class="form-row" style="margin-bottom: var(--spacing-3);">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="colorBrand">Cor Principal</label>
+                        <input type="color" id="colorBrand" value="#6366F1" style="padding: 4px; height: 40px; cursor: pointer;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="colorHeader">Cab. Tabela</label>
+                        <input type="color" id="colorHeader" value="#F1F5F9" style="padding: 4px; height: 40px; cursor: pointer;">
+                    </div>
+                </div>
+                <button class="btn btn-secondary" id="btnResetColors" style="width: 100%; font-size: 0.75rem;">
+                    <i class="ph ph-arrow-counter-clockwise" style="margin-right: 8px;"></i> Resetar Cores
+                </button>
+
+                <hr style="border: 0; border-top: 1px solid var(--color-border); margin: var(--spacing-4) 0;">
+
+                <label style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; display: block;">Tom Padrão por Vocalista</label>
+                <div id="presetList" style="max-height: 150px; overflow-y: auto; margin-bottom: var(--spacing-3);"></div>
+                <div class="form-row" style="margin-bottom: var(--spacing-3);">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <input type="text" id="presetVocalist" placeholder="Nome do vocalista">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <select id="presetKey">
+                            <option value="">Tom</option>
+                            <option value="C">C</option>
+                            <option value="C#">C#</option>
+                            <option value="Db">Db</option>
+                            <option value="D">D</option>
+                            <option value="Eb">Eb</option>
+                            <option value="E">E</option>
+                            <option value="F">F</option>
+                            <option value="F#">F#</option>
+                            <option value="G">G</option>
+                            <option value="Ab">Ab</option>
+                            <option value="A">A</option>
+                            <option value="Bb">Bb</option>
+                            <option value="B">B</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" id="btnSavePreset" style="width: 100%; font-size: 0.75rem;">
+                    <i class="ph ph-plus" style="margin-right: 8px;"></i> Salvar Predefinição
+                </button>
+
+                <hr style="border: 0; border-top: 1px solid var(--color-border); margin: var(--spacing-4) 0;">
+
+                <label style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; display: block;">Integração YouTube</label>
+                <div class="form-group" style="margin-bottom: var(--spacing-3);">
+                    <label for="youtubeApiKey" style="font-size: 0.75rem;">Chave da API do YouTube (YouTube Data API v3):</label>
+                    <input type="text" id="youtubeApiKey" placeholder="AIzaSy..." style="width: 100%; font-size:0.8rem;">
+                    <p style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 4px;">
+                        Crie uma chave em <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud Console</a>,
+                        habilite a YouTube Data API v3 e restrinja por HTTP referrer.
+                    </p>
+                </div>
+                <button class="btn btn-secondary" id="btnSaveYoutubeApiKey" style="width: 100%; font-size: 0.75rem; margin-bottom: var(--spacing-4);">
+                    <i class="ph ph-check" style="margin-right: 8px;"></i> Salvar Chave YouTube
+                </button>
+
+                <hr style="border: 0; border-top: 1px solid var(--color-border); margin: var(--spacing-4) 0;">
+
+                <label style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; display: block;">Identidade do App</label>
+                <div class="form-group" style="margin-bottom: var(--spacing-3);">
+                    <label for="brandTitleInput" style="font-size: 0.75rem;">Nome ao lado da logo:</label>
+                    <input type="text" id="brandTitleInput" placeholder="LouvorApp" style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: var(--spacing-3);">
+                    <label for="footerTextInput" style="font-size: 0.75rem;">Texto do rodapé:</label>
+                    <input type="text" id="footerTextInput" placeholder="Criado por Leonardo Araujo" style="width: 100%;">
+                </div>
+                <button class="btn btn-secondary" id="btnSaveIdentity" style="width: 100%; font-size: 0.75rem;">
+                    <i class="ph ph-check" style="margin-right: 8px;"></i> Salvar Identidade
+                </button>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button type="button" class="btn btn-danger" id="btnLogoutAdmin">Sair do Modo Admin</button>
+                <button type="button" class="btn btn-secondary" id="btnCancelAdminPanel">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast de Notificação -->
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <!-- Footer -->
+    <footer class="app-footer" id="appFooter">
+        <span id="footerText">Criado por Leonardo Araujo</span>
+    </footer>
+    </div><!-- /app-container -->
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script type="module" src="./js/app.js"></script>
+    <script src="./js/mobile-test.js"></script>
+</body>
+</html>
