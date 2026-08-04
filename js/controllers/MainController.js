@@ -90,6 +90,7 @@ export class MainController {
             onViewLyrics: this.handleViewLyrics.bind(this),
             onPeriodoChange: this.handlePeriodoChange.bind(this),
             onCriarPeriodo: this.handleCriarPeriodo.bind(this),
+            onDeletarPeriodo: this.handleDeletarPeriodo.bind(this),
             onCompartilhar: this.handleCompartilhar.bind(this),
             onShowToast: (msg, type) => showToast(msg, type),
             onToggleChange: this.handleToggleChange.bind(this),
@@ -1064,6 +1065,21 @@ export class MainController {
             this.homeView.renderPeriodos(periodos);
         } catch (error) {
             console.error("Erro ao carregar períodos:", error);
+        }
+    }
+
+    async handleDeletarPeriodo(periodoId) {
+        if (!confirm("Tem certeza que deseja deletar este período?")) return;
+        try {
+            await SongModel.deleteRepertorio(periodoId);
+            this.currentRepertorio = null;
+            this.homeView.currentPeriodo = null;
+            this.homeView.periodoSelect.value = '';
+            await this.loadPeriodos();
+            showToast("Período deletado!");
+        } catch (error) {
+            console.error("Erro ao deletar período:", error);
+            showToast("Erro ao deletar período", "error");
         }
     }
 

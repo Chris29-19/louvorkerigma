@@ -27,7 +27,7 @@ export const dbOperations = {
 
     async put(collectionName, data) {
         const { id, ...rest } = data;
-        await db.collection(collectionName).doc(id).update(rest);
+        await db.collection(collectionName).doc(id).set(rest, { merge: true });
     },
 
     async getAll(collectionName) {

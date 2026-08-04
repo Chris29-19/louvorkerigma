@@ -32,6 +32,7 @@ export class HomeView {
         this.periodoDataInicio = document.getElementById('periodoDataInicio');
         this.periodoDataFim = document.getElementById('periodoDataFim');
         this.btnCriarPeriodo = document.getElementById('btnCriarPeriodo');
+        this.btnDeletarPeriodo = document.getElementById('btnDeletarPeriodo');
         this.btnCompartilhar = document.getElementById('btnCompartilhar');
         this.subTabBtns = document.querySelectorAll('.sub-tab-btn');
         this.subTabPanels = document.querySelectorAll('.sub-tab-panel');
@@ -248,6 +249,13 @@ export class HomeView {
                 handlers.onCriarPeriodo(inicio, fim);
             });
         }
+        if (this.btnDeletarPeriodo) {
+            this.btnDeletarPeriodo.addEventListener('click', () => {
+                if (this.periodoSelect?.value) {
+                    handlers.onDeletarPeriodo(this.periodoSelect.value);
+                }
+            });
+        }
         if (this.btnCompartilhar) {
             this.btnCompartilhar.addEventListener('click', () => handlers.onCompartilhar());
         }
@@ -278,17 +286,36 @@ export class HomeView {
             });
         });
 
-        // Botões remover música do repertório
+        // Botões remover música do repertório (menu ⋮)
         document.addEventListener('click', (e) => {
-            const removeBtn = e.target.closest('.btn-remove-song');
-            if (removeBtn) {
+            // Menu dropdown toggle
+            const menuBtn = e.target.closest('.btn-menu-repertorio');
+            if (menuBtn) {
                 e.stopPropagation();
-                handlers.onRemoveSongRepertorio(
-                    removeBtn.dataset.dia,
-                    removeBtn.dataset.secao,
-                    parseInt(removeBtn.dataset.index)
-                );
+                const wrapper = menuBtn.closest('.song-menu-repertorio');
+                const dropdown = wrapper.querySelector('.menu-dropdown-repertorio');
+                document.querySelectorAll('.menu-dropdown-repertorio').forEach(d => {
+                    if (d !== dropdown) d.style.display = 'none';
+                });
+                dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+                return;
             }
+
+            // Delete option
+            const deleteBtn = e.target.closest('.menu-delete-repertorio');
+            if (deleteBtn) {
+                e.stopPropagation();
+                deleteBtn.closest('.menu-dropdown-repertorio').style.display = 'none';
+                handlers.onRemoveSongRepertorio(
+                    deleteBtn.dataset.dia,
+                    deleteBtn.dataset.secao,
+                    parseInt(deleteBtn.dataset.index)
+                );
+                return;
+            }
+
+            // Close all dropdowns
+            document.querySelectorAll('.menu-dropdown-repertorio').forEach(d => d.style.display = 'none');
         });
 
         // Dropdowns de vocal e tom no repertório
@@ -486,6 +513,7 @@ export class HomeView {
         if (!this.periodoSelect) return;
         const currentValue = this.periodoSelect.value;
         this.periodoSelect.innerHTML = '<option value="">Períodos salvos</option>';
+        periodos.sort((a, b) => b.periodo.localeCompare(a.periodo));
         periodos.forEach(p => {
             const option = document.createElement('option');
             option.value = p.id;
@@ -580,30 +608,34 @@ export class HomeView {
                 vocalSelect = `<span class="rep-meta-text">${this._esc(musica.vocalista || '-')}</span>`;
             }
 
-            const keyOptions = ['', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'];
+            const keyOptions = ['C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'];
             let tomSelect = `
                 <select class="rep-key-select" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
                     <option value="">Tom</option>
-                    ${keyOptions.filter(k => k).map(k => `<option value="${k}" ${musica.tom === k ? 'selected' : ''}>${k}</option>`).join('')}
+                    ${keyOptions.map(k => `<option value="${k}" ${musica.tom === k ? 'selected' : ''}>${k}</option>`).join('')}
                 </select>
             `;
 
             item.innerHTML = `
-                <div class="song-info-repertorio">
-                    <span class="song-number">${index + 1}</span>
-                    <div class="song-details">
+                <div class="song-left-repertorio">
+                    <div class="song-title-artist">
                         <span class="song-title-repertorio">${this._esc(musica.titulo)}</span>
                         <span class="song-artist-repertorio">${this._esc(musica.artista || '')}</span>
                     </div>
                 </div>
-                <div class="song-vocal-key-repertorio">
+                <div class="song-right-repertorio">
                     ${vocalSelect}
                     ${tomSelect}
-                </div>
-                <div class="song-actions-repertorio">
-                    <button class="btn-icon btn-sm btn-remove-song" data-dia="${dia}" data-secao="${secao}" data-index="${index}" title="Remover">
-                        <i class="ph ph-x"></i>
-                    </button>
+                    <div class="song-menu-repertorio" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
+                        <button class="btn-menu-repertorio" title="Opções">
+                            <i class="ph ph-dots-three-vertical"></i>
+                        </button>
+                        <div class="menu-dropdown-repertorio" style="display:none;">
+                            <button class="menu-option-repertorio menu-delete-repertorio" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
+                                <i class="ph ph-trash"></i> Remover
+                            </button>
+                        </div>
+                    </div>
                 </div>
             `;
 

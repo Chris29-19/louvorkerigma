@@ -240,6 +240,7 @@ export class SongModel {
 
     static async createRepertorio(id, periodo) {
         const repertorio = {
+            id,
             periodo,
             quarta: { adoracao: [], oferta: [], louvor: [] },
             sabado: { adoracao: [], oferta: [], louvor: [] },
@@ -249,17 +250,13 @@ export class SongModel {
             ceiaAtivo: false,
             criadoEm: new Date().toISOString()
         };
-        await dbOperations.setById(STORE_REPERTORIO, id, { id, ...repertorio });
+        await db.collection(STORE_REPERTORIO).doc(id).set(repertorio);
         return id;
     }
 
     static async updateRepertorio(periodoId, updates) {
         try {
-            const existing = await this.getRepertorio(periodoId);
-            if (!existing) throw new Error("Repertório não encontrado");
-            
-            const updated = { ...existing, ...updates };
-            return await dbOperations.put(STORE_REPERTORIO, updated);
+            await dbOperations.put(STORE_REPERTORIO, { id: periodoId, ...updates });
         } catch (error) {
             console.error("Error updating repertorio:", error);
             throw error;
@@ -268,8 +265,12 @@ export class SongModel {
 
     static async addMusicaRepertorio(periodoId, dia, secao, musica) {
         try {
-            const repertorio = await this.getRepertorio(periodoId);
-            if (!repertorio) throw new Error("Repertório não encontrado");
+            let repertorio = await this.getRepertorio(periodoId);
+            
+            if (!repertorio) {
+                await this.createRepertorio(periodoId, '');
+                repertorio = await this.getRepertorio(periodoId);
+            }
 
             if (!repertorio[dia]) {
                 repertorio[dia] = { adoracao: [], oferta: [], louvor: [] };
@@ -279,7 +280,8 @@ export class SongModel {
             }
 
             repertorio[dia][secao].push(musica);
-            return await dbOperations.put(STORE_REPERTORIO, repertorio);
+            delete repertorio.id;
+            await db.collection(STORE_REPERTORIO).doc(periodoId).set(repertorio);
         } catch (error) {
             console.error("Error adding music to repertorio:", error);
             throw error;
@@ -294,7 +296,8 @@ export class SongModel {
             }
 
             repertorio[dia][secao].splice(index, 1);
-            return await dbOperations.put(STORE_REPERTORIO, repertorio);
+            delete repertorio.id;
+            await db.collection(STORE_REPERTORIO).doc(periodoId).set(repertorio);
         } catch (error) {
             console.error("Error removing music from repertorio:", error);
             throw error;
@@ -310,7 +313,6 @@ export class SongModel {
 
             repertorio[dia][secao][index][field] = value;
 
-            // Se mudou o vocalista, atualiza o tom baseado no vocalConfigs
             if (field === 'vocalista' && value) {
                 const musica = repertorio[dia][secao][index];
                 if (musica.vocalConfigs && musica.vocalConfigs.length > 0) {
@@ -321,7 +323,8 @@ export class SongModel {
                 }
             }
 
-            return await dbOperations.put(STORE_REPERTORIO, repertorio);
+            delete repertorio.id;
+            await db.collection(STORE_REPERTORIO).doc(periodoId).set(repertorio);
         } catch (error) {
             console.error("Error updating music field in repertorio:", error);
             throw error;
