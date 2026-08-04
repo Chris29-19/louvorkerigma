@@ -157,12 +157,10 @@
                 <div class="repertorio-header">
                     <div class="periodo-selector">
                         <i class="ph ph-calendar"></i>
-                        <select id="periodoSelect">
-                            <option value="">Selecione o período</option>
+                        <input type="date" id="periodoDatePicker" class="date-picker-input">
+                        <select id="periodoSelect" class="periodo-existing-select">
+                            <option value="">Períodos salvos</option>
                         </select>
-                        <button class="btn btn-secondary btn-sm" id="btnNovoPeriodo" title="Criar nova semana">
-                            <i class="ph ph-plus"></i>
-                        </button>
                     </div>
                     <button class="btn btn-primary btn-share" id="btnCompartilhar">
                         <i class="ph ph-whatsapp-logo"></i>

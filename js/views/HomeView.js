@@ -29,7 +29,7 @@ export class HomeView {
 
         // Repertório da Semana
         this.periodoSelect = document.getElementById('periodoSelect');
-        this.btnNovoPeriodo = document.getElementById('btnNovoPeriodo');
+        this.periodoDatePicker = document.getElementById('periodoDatePicker');
         this.btnCompartilhar = document.getElementById('btnCompartilhar');
         this.subTabBtns = document.querySelectorAll('.sub-tab-btn');
         this.subTabPanels = document.querySelectorAll('.sub-tab-panel');
@@ -230,11 +230,18 @@ export class HomeView {
         // Repertório da Semana
         if (this.periodoSelect) {
             this.periodoSelect.addEventListener('change', () => {
-                handlers.onPeriodoChange(this.periodoSelect.value);
+                if (this.periodoSelect.value) {
+                    handlers.onPeriodoChange(this.periodoSelect.value);
+                }
             });
         }
-        if (this.btnNovoPeriodo) {
-            this.btnNovoPeriodo.addEventListener('click', () => handlers.onNovoPeriodo());
+        if (this.periodoDatePicker) {
+            this.periodoDatePicker.addEventListener('change', () => {
+                const selectedDate = this.periodoDatePicker.value;
+                if (selectedDate) {
+                    handlers.onDatePickerChange(selectedDate);
+                }
+            });
         }
         if (this.btnCompartilhar) {
             this.btnCompartilhar.addEventListener('click', () => handlers.onCompartilhar());
@@ -275,6 +282,20 @@ export class HomeView {
                     removeBtn.dataset.dia,
                     removeBtn.dataset.secao,
                     parseInt(removeBtn.dataset.index)
+                );
+            }
+        });
+
+        // Dropdowns de vocal e tom no repertório
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('rep-vocal-select') || e.target.classList.contains('rep-key-select')) {
+                const select = e.target;
+                handlers.onRepertorioFieldChange(
+                    select.dataset.dia,
+                    select.dataset.secao,
+                    parseInt(select.dataset.index),
+                    select.classList.contains('rep-vocal-select') ? 'vocalista' : 'tom',
+                    select.value
                 );
             }
         });
@@ -459,7 +480,7 @@ export class HomeView {
     renderPeriodos(periodos) {
         if (!this.periodoSelect) return;
         const currentValue = this.periodoSelect.value;
-        this.periodoSelect.innerHTML = '<option value="">Selecione o período</option>';
+        this.periodoSelect.innerHTML = '<option value="">Períodos salvos</option>';
         periodos.forEach(p => {
             const option = document.createElement('option');
             option.value = p.id;
@@ -539,13 +560,40 @@ export class HomeView {
             item.dataset.secao = secao;
             item.dataset.index = index;
 
+            const vc = musica.vocalConfigs || [];
+            const hasVocalConfigs = vc.length > 0;
+
+            let vocalSelect = '';
+            if (hasVocalConfigs) {
+                vocalSelect = `
+                    <select class="rep-vocal-select" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
+                        <option value="">Selecione</option>
+                        ${vc.map(v => `<option value="${this._esc(v.vocalist)}" ${musica.vocalista === v.vocalist ? 'selected' : ''}>${this._esc(v.vocalist)}</option>`).join('')}
+                    </select>
+                `;
+            } else {
+                vocalSelect = `<span class="rep-meta-text">${this._esc(musica.vocalista || '-')}</span>`;
+            }
+
+            const keyOptions = ['', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'];
+            let tomSelect = `
+                <select class="rep-key-select" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
+                    <option value="">Tom</option>
+                    ${keyOptions.filter(k => k).map(k => `<option value="${k}" ${musica.tom === k ? 'selected' : ''}>${k}</option>`).join('')}
+                </select>
+            `;
+
             item.innerHTML = `
                 <div class="song-info-repertorio">
                     <span class="song-number">${index + 1}</span>
                     <div class="song-details">
                         <span class="song-title-repertorio">${this._esc(musica.titulo)}</span>
-                        <span class="song-meta-repertorio">Vocal: ${this._esc(musica.vocalista || 'Selecione')} | Tom: ${this._esc(musica.tom || '-')}</span>
+                        <span class="song-artist-repertorio">${this._esc(musica.artista || '')}</span>
                     </div>
+                </div>
+                <div class="song-vocal-key-repertorio">
+                    ${vocalSelect}
+                    ${tomSelect}
                 </div>
                 <div class="song-actions-repertorio">
                     <button class="btn-icon btn-sm btn-remove-song" data-dia="${dia}" data-secao="${secao}" data-index="${index}" title="Remover">

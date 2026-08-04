@@ -89,11 +89,12 @@ export class MainController {
             onYoutubeOpenApp: this.handleYoutubeOpenApp.bind(this),
             onViewLyrics: this.handleViewLyrics.bind(this),
             onPeriodoChange: this.handlePeriodoChange.bind(this),
-            onNovoPeriodo: this.handleNovoPeriodo.bind(this),
+            onDatePickerChange: this.handleDatePickerChange.bind(this),
             onCompartilhar: this.handleCompartilhar.bind(this),
             onToggleChange: this.handleToggleChange.bind(this),
             onAddSongRepertorio: this.handleAddSongRepertorio.bind(this),
-            onRemoveSongRepertorio: this.handleRemoveSongRepertorio.bind(this)
+            onRemoveSongRepertorio: this.handleRemoveSongRepertorio.bind(this),
+            onRepertorioFieldChange: this.handleRepertorioFieldChange.bind(this)
         });
 
         this.formView.bindEvents({
@@ -1011,16 +1012,17 @@ export class MainController {
         }
     }
 
-    async handleNovoPeriodo() {
-        const hoje = new Date();
-        const diaSemana = hoje.getDay();
-        
-        // Calcula segunda-feira da semana atual
+    handleDatePickerChange(dateStr) {
+        // dateStr está no formato YYYY-MM-DD
+        const selected = new Date(dateStr + 'T12:00:00');
+        const diaSemana = selected.getDay();
+
+        // Calcula segunda-feira da semana
         const diffSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
-        const segunda = new Date(hoje);
-        segunda.setDate(hoje.getDate() + diffSegunda);
-        
-        // Calcula sexta-feira da semana atual
+        const segunda = new Date(selected);
+        segunda.setDate(selected.getDate() + diffSegunda);
+
+        // Calcula sexta-feira
         const sexta = new Date(segunda);
         sexta.setDate(segunda.getDate() + 4);
 
@@ -1031,17 +1033,31 @@ export class MainController {
             return `${dia}/${mes}/${ano}`;
         };
 
-        const periodo = `De ${formatarData(segunda)} a ${formatarData(sexta)}`;
-        const id = `${formatarData(segunda).replace(/\//g, '-')}_${formatarData(sexta).replace(/\//g, '-')}`;
+        const formatarDataId = (d) => {
+            const dia = String(d.getDate()).padStart(2, '0');
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const ano = d.getFullYear();
+            return `${dia}-${mes}-${ano}`;
+        };
 
+        const periodo = `De ${formatarData(segunda)} a ${formatarData(sexta)}`;
+        const id = `${formatarDataId(segunda)}_${formatarDataId(sexta)}`;
+
+        this._criarOuCarregarPeriodo(id, periodo);
+    }
+
+    async _criarOuCarregarPeriodo(id, periodo) {
         try {
-            await SongModel.createRepertorio(id, periodo);
+            // Verifica se já existe
+            const existente = await SongModel.getRepertorio(id);
+            if (!existente) {
+                await SongModel.createRepertorio(id, periodo);
+            }
             this.homeView.setSelectedPeriodo(id);
             await this.loadPeriodos();
             await this.handlePeriodoChange(id);
-            showToast("Novo período criado!");
         } catch (error) {
-            console.error("Erro ao criar período:", error);
+            console.error("Erro ao criar/carregar período:", error);
             showToast("Erro ao criar período", "error");
         }
     }
@@ -1077,10 +1093,21 @@ export class MainController {
             return;
         }
 
-        // Abre modal para selecionar música
-        const songs = await SongModel.getAllSongs();
+        // Mapeia seção → tipo de música
+        const secaoTipoMap = {
+            'adoracao': 'adoracao',
+            'oferta': 'louvor',
+            'louvor': 'louvor',
+            'pos-palavra': 'adoracao',
+            'ceia': 'adoracao'
+        };
+        const tipoFiltro = secaoTipoMap[secao] || 'louvor';
+
+        // Filtra músicas por categoria
+        const allSongs = await SongModel.getAllSongs();
+        const songs = allSongs.filter(s => s.type === tipoFiltro);
         if (songs.length === 0) {
-            showToast("Cadastre músicas primeiro", "error");
+            showToast("Nenhuma música nesta categoria", "error");
             return;
         }
 
@@ -1140,12 +1167,19 @@ export class MainController {
 
     async _addSongToRepertorio(song, dia, secao, modal) {
         try {
+            // Pega vocalConfigs da música para popular dropdowns
+            const vocalConfigs = (song.vocalConfigs || []).map(vc => ({
+                vocalist: vc.vocalist,
+                key: vc.key
+            }));
+
             const musica = {
                 id: song.id,
                 titulo: song.title,
                 artista: song.artist,
                 vocalista: '',
-                tom: song.key || ''
+                tom: song.key || '',
+                vocalConfigs: vocalConfigs
             };
 
             await SongModel.addMusicaRepertorio(this.homeView.currentPeriodo, dia, secao, musica);
@@ -1172,6 +1206,18 @@ export class MainController {
         } catch (error) {
             console.error("Erro ao remover música:", error);
             showToast("Erro ao remover música", "error");
+        }
+    }
+
+    async handleRepertorioFieldChange(dia, secao, index, field, value) {
+        if (!this.homeView.currentPeriodo) return;
+
+        try {
+            await SongModel.updateMusicaRepertorio(this.homeView.currentPeriodo, dia, secao, index, field, value);
+            const repertorio = await SongModel.getRepertorio(this.homeView.currentPeriodo);
+            this.currentRepertorio = repertorio;
+        } catch (error) {
+            console.error("Erro ao atualizar campo:", error);
         }
     }
 

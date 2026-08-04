@@ -301,6 +301,33 @@ export class SongModel {
         }
     }
 
+    static async updateMusicaRepertorio(periodoId, dia, secao, index, field, value) {
+        try {
+            const repertorio = await this.getRepertorio(periodoId);
+            if (!repertorio || !repertorio[dia] || !repertorio[dia][secao]) {
+                throw new Error("Repertório não encontrado");
+            }
+
+            repertorio[dia][secao][index][field] = value;
+
+            // Se mudou o vocalista, atualiza o tom baseado no vocalConfigs
+            if (field === 'vocalista' && value) {
+                const musica = repertorio[dia][secao][index];
+                if (musica.vocalConfigs && musica.vocalConfigs.length > 0) {
+                    const vc = musica.vocalConfigs.find(v => v.vocalist === value);
+                    if (vc) {
+                        musica.tom = vc.key;
+                    }
+                }
+            }
+
+            return await dbOperations.put(STORE_REPERTORIO, repertorio);
+        } catch (error) {
+            console.error("Error updating music field in repertorio:", error);
+            throw error;
+        }
+    }
+
     static async deleteRepertorio(periodoId) {
         try {
             return await dbOperations.delete(STORE_REPERTORIO, periodoId);

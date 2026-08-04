@@ -442,7 +442,7 @@ html {
     color: var(--color-brand-primary);
 }
 
-.periodo-selector select {
+.date-picker-input {
     flex: 1;
     padding: var(--spacing-2) var(--spacing-3);
     border: 1px solid var(--color-border);
@@ -451,11 +451,19 @@ html {
     color: var(--color-text-primary);
     font-size: 0.875rem;
     cursor: pointer;
+    min-width: 0;
 }
 
-.periodo-selector .btn-sm {
-    padding: var(--spacing-2);
-    min-width: auto;
+.periodo-existing-select {
+    flex: 1;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    min-width: 0;
 }
 
 .btn-share {
@@ -671,9 +679,40 @@ html {
     color: var(--color-text-primary);
 }
 
+.song-artist-repertorio {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+}
+
 .song-meta-repertorio {
     font-size: 0.75rem;
     color: var(--color-text-muted);
+}
+
+.song-vocal-key-repertorio {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.rep-vocal-select,
+.rep-key-select {
+    padding: 4px 6px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.rep-vocal-select {
+    max-width: 120px;
+}
+
+.rep-key-select {
+    max-width: 65px;
 }
 
 .song-actions-repertorio {
@@ -753,6 +792,12 @@ html {
 
     .periodo-selector {
         min-width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .date-picker-input,
+    .periodo-existing-select {
+        font-size: 0.8rem;
     }
 
     .btn-share {
@@ -762,5 +807,21 @@ html {
     .sub-tab-btn {
         font-size: 0.75rem;
         padding: var(--spacing-2);
+    }
+
+    .song-vocal-key-repertorio {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .rep-vocal-select,
+    .rep-key-select {
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .song-item-repertorio {
+        flex-wrap: wrap;
+        gap: 8px;
     }
 }
