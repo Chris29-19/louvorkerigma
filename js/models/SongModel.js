@@ -1,5 +1,5 @@
 // js/models/SongModel.js
-import { dbOperations, STORE_SONGS, STORE_PRESETS, STORE_REPERTORIO } from '../db/firebase.js';
+import { db, dbOperations, STORE_SONGS, STORE_PRESETS, STORE_REPERTORIO, STORE_SUGESTOES } from '../db/firebase.js';
 import { normalizeText } from '../utils/helpers.js';
 
 export class SongModel {
@@ -331,11 +331,74 @@ export class SongModel {
         }
     }
 
+    static async replaceMusicaRepertorio(periodoId, dia, secao, index, novaMusica) {
+        try {
+            const repertorio = await this.getRepertorio(periodoId);
+            if (!repertorio || !repertorio[dia] || !repertorio[dia][secao]) {
+                throw new Error("Repertório não encontrado");
+            }
+
+            repertorio[dia][secao][index] = novaMusica;
+
+            delete repertorio.id;
+            await db.collection(STORE_REPERTORIO).doc(periodoId).set(repertorio);
+        } catch (error) {
+            console.error("Error replacing music in repertorio:", error);
+            throw error;
+        }
+    }
+
+    static async saveRepertorio(periodoId, repertorioData) {
+        try {
+            const { id, ...rest } = repertorioData;
+            await db.collection(STORE_REPERTORIO).doc(periodoId).set(rest);
+        } catch (error) {
+            console.error("Error saving repertorio:", error);
+            throw error;
+        }
+    }
+
     static async deleteRepertorio(periodoId) {
         try {
             return await dbOperations.delete(STORE_REPERTORIO, periodoId);
         } catch (error) {
             console.error(`Error deleting repertorio ${periodoId}:`, error);
+            throw error;
+        }
+    }
+
+    // === Sugestões ===
+
+    static async addSugestao(nome, texto) {
+        try {
+            const data = {
+                nome,
+                texto,
+                criadoEm: new Date().toISOString()
+            };
+            const docRef = await db.collection(STORE_SUGESTOES).add(data);
+            await docRef.update({ id: docRef.id });
+            return docRef.id;
+        } catch (error) {
+            console.error("Error adding sugestao:", error);
+            throw error;
+        }
+    }
+
+    static async getSugestoes() {
+        try {
+            return await dbOperations.getAll(STORE_SUGESTOES);
+        } catch (error) {
+            console.error("Error fetching sugestoes:", error);
+            throw error;
+        }
+    }
+
+    static async deleteSugestao(id) {
+        try {
+            await db.collection(STORE_SUGESTOES).doc(id).delete();
+        } catch (error) {
+            console.error("Error deleting sugestao:", error);
             throw error;
         }
     }

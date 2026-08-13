@@ -91,6 +91,14 @@ body.admin-mode .btn.admin-only {
     background-color: var(--color-brand-primary-hover);
 }
 
+.btn-danger {
+    background-color: var(--color-danger);
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #DC2626;
+}
+
 /* Inputs & Selects */
 .search-input-wrapper {
     position: relative;
@@ -676,4 +684,101 @@ a.action-option {
     color: inherit;
     display: flex;
     align-items: center;
+}
+
+/* Changelog Modal */
+.changelog-content {
+    max-width: 380px;
+    border-radius: 16px;
+    overflow: hidden;
+    padding: 0;
+}
+
+.changelog-header {
+    text-align: center;
+    padding: 28px 20px 12px;
+}
+
+.changelog-emoji {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.changelog-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.changelog-version {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 3px 12px;
+    border-radius: 20px;
+    background: var(--color-bg-elevated);
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.changelog-body {
+    padding: 8px 24px 16px;
+}
+
+.changelog-body ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.changelog-body li {
+    padding: 6px 0;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.changelog-body li::before {
+    content: "✅";
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.changelog-footer {
+    text-align: center;
+    padding: 12px 20px 24px;
+    border-top: 1px solid var(--color-border);
+}
+
+.changelog-dev {
+    margin: 0 0 16px;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    line-height: 1.4;
+}
+
+.changelog-dev strong {
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+
+.btn-changelog-dismiss {
+    display: inline-block;
+    padding: 10px 28px;
+    border: none;
+    border-radius: 8px;
+    background: var(--color-brand-primary);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.btn-changelog-dismiss:hover {
+    background: var(--color-brand-primary-hover);
 }

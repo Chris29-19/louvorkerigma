@@ -14,6 +14,7 @@ const STORE_SONGS = 'songs';
 const STORE_PRESETS = 'vocalPresets';
 const STORE_SETTINGS = 'appSettings';
 const STORE_REPERTORIO = 'repertorio_semanal';
+const STORE_SUGESTOES = 'sugestoes';
 
 firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(() => {});
 
@@ -67,4 +68,4 @@ export const dbOperations = {
     }
 };
 
-export { STORE_SONGS, STORE_PRESETS, STORE_SETTINGS, STORE_REPERTORIO };
+export { db, STORE_SONGS, STORE_PRESETS, STORE_SETTINGS, STORE_REPERTORIO, STORE_SUGESTOES };

@@ -89,13 +89,14 @@ export class MainController {
             onYoutubeOpenApp: this.handleYoutubeOpenApp.bind(this),
             onViewLyrics: this.handleViewLyrics.bind(this),
             onPeriodoChange: this.handlePeriodoChange.bind(this),
-            onCriarPeriodo: this.handleCriarPeriodo.bind(this),
+            onSalvarPeriodo: this.handleSalvarPeriodo.bind(this),
             onDeletarPeriodo: this.handleDeletarPeriodo.bind(this),
             onCompartilhar: this.handleCompartilhar.bind(this),
             onShowToast: (msg, type) => showToast(msg, type),
             onToggleChange: this.handleToggleChange.bind(this),
             onAddSongRepertorio: this.handleAddSongRepertorio.bind(this),
             onRemoveSongRepertorio: this.handleRemoveSongRepertorio.bind(this),
+            onReplaceSongRepertorio: this.handleReplaceSongRepertorio.bind(this),
             onRepertorioFieldChange: this.handleRepertorioFieldChange.bind(this)
         });
 
@@ -107,6 +108,85 @@ export class MainController {
         });
         
         this.bindAuthEvents();
+        this.bindFooterEvents();
+    }
+
+    bindFooterEvents() {
+        const btnSugestoes = document.getElementById('btnSugestoes');
+        const sugestoesModal = document.getElementById('sugestoesModal');
+        const btnCloseSugestoes = document.getElementById('btnCloseSugestoes');
+        const btnEnviarSugestao = document.getElementById('btnEnviarSugestao');
+        const obrigadoModal = document.getElementById('obrigadoModal');
+        const maisModal = document.getElementById('maisModal');
+        const btnMais = document.getElementById('btnMais');
+        const btnSobre = document.getElementById('btnSobre');
+        const sobreModal = document.getElementById('sobreModal');
+        const btnCloseSobre = document.getElementById('btnCloseSobre');
+        const btnFooterAddSong = document.getElementById('btnFooterAddSong');
+        const btnCloseAdminSugestoes = document.getElementById('btnCloseAdminSugestoes');
+        const adminSugestoesModal = document.getElementById('adminSugestoesModal');
+
+        // Hide footer + by default
+        if (btnFooterAddSong) btnFooterAddSong.style.display = 'none';
+
+        // Sugestões open/close
+        if (btnSugestoes) btnSugestoes.addEventListener('click', () => sugestoesModal.classList.add('active'));
+        if (btnCloseSugestoes) btnCloseSugestoes.addEventListener('click', () => sugestoesModal.classList.remove('active'));
+        if (sugestoesModal) sugestoesModal.addEventListener('click', (e) => {
+            if (e.target === sugestoesModal) sugestoesModal.classList.remove('active');
+        });
+
+        // Enviar sugestão
+        if (btnEnviarSugestao) {
+            btnEnviarSugestao.addEventListener('click', async () => {
+                const nome = document.getElementById('sugestaoNome').value.trim();
+                const texto = document.getElementById('sugestaoTexto').value.trim();
+                if (!texto) { showToast("Escreva sua sugestão", "error"); return; }
+                try {
+                    await SongModel.addSugestao(nome || 'Anônimo', texto);
+                    sugestoesModal.classList.remove('active');
+                    document.getElementById('sugestaoNome').value = '';
+                    document.getElementById('sugestaoTexto').value = '';
+                    obrigadoModal.classList.add('active');
+                    setTimeout(() => obrigadoModal.classList.remove('active'), 2000);
+                } catch (err) { showToast("Erro ao enviar", "error"); }
+            });
+        }
+
+        // Obrigado close on click
+        if (obrigadoModal) obrigadoModal.addEventListener('click', () => obrigadoModal.classList.remove('active'));
+
+        // Mais open/close
+        if (btnMais) btnMais.addEventListener('click', () => maisModal.classList.add('active'));
+        if (maisModal) maisModal.addEventListener('click', (e) => {
+            if (e.target === maisModal) maisModal.classList.remove('active');
+        });
+
+        // Sobre open/close
+        if (btnSobre) {
+            btnSobre.addEventListener('click', () => {
+                maisModal.classList.remove('active');
+                sobreModal.classList.add('active');
+            });
+        }
+        if (btnCloseSobre) btnCloseSobre.addEventListener('click', () => sobreModal.classList.remove('active'));
+        if (sobreModal) sobreModal.addEventListener('click', (e) => {
+            if (e.target === sobreModal) sobreModal.classList.remove('active');
+        });
+
+        // Admin sugestões close
+        if (btnCloseAdminSugestoes) btnCloseAdminSugestoes.addEventListener('click', () => adminSugestoesModal.classList.remove('active'));
+        if (adminSugestoesModal) adminSugestoesModal.addEventListener('click', (e) => {
+            if (e.target === adminSugestoesModal) adminSugestoesModal.classList.remove('active');
+        });
+
+        // Footer + button triggers same as header add song
+        if (btnFooterAddSong) {
+            btnFooterAddSong.addEventListener('click', () => {
+                this.formView.openModal();
+                setTimeout(() => document.getElementById('musicName')?.focus(), 100);
+            });
+        }
     }
 
     bindAuthEvents() {
@@ -485,16 +565,61 @@ export class MainController {
                 showToast("Identidade salva com sucesso!");
             });
         }
+
+        // View Sugestões (admin)
+        const btnViewSugestoes = document.getElementById('btnViewSugestoes');
+        if (btnViewSugestoes) {
+            btnViewSugestoes.addEventListener('click', async () => {
+                this.adminPanelModal.classList.remove('active');
+                const modal = document.getElementById('adminSugestoesModal');
+                const list = document.getElementById('adminSugestoesList');
+                list.innerHTML = '<p style="color: var(--color-text-muted); text-align: center;">Carregando...</p>';
+                modal.classList.add('active');
+                try {
+                    const sugestoes = await SongModel.getSugestoes();
+                    if (!sugestoes || sugestoes.length === 0) {
+                        list.innerHTML = '<p style="color: var(--color-text-muted); text-align: center;">Nenhuma sugestão ainda.</p>';
+                        return;
+                    }
+                    list.innerHTML = sugestoes.map(s => `
+                        <div style="background: var(--color-bg-elevated); border-radius: var(--radius-md); padding: 12px; margin-bottom: 8px; position: relative;">
+                            <strong style="font-size: 0.85rem; color: var(--color-text-primary);">${s.nome || 'Anônimo'}</strong>
+                            <p style="margin: 4px 0 0; font-size: 0.8rem; color: var(--color-text-muted);">${s.texto}</p>
+                            <p style="margin: 6px 0 0; font-size: 0.65rem; color: var(--color-text-muted); opacity: 0.6;">${s.criadoEm ? new Date(s.criadoEm).toLocaleString('pt-BR') : ''}</p>
+                            <button class="btn-delete-sugestao" data-id="${s.id}" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--color-danger); cursor: pointer; font-size: 1rem;">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </div>
+                    `).join('');
+                    list.querySelectorAll('.btn-delete-sugestao').forEach(btn => {
+                        btn.addEventListener('click', async () => {
+                            const id = btn.getAttribute('data-id');
+                            await SongModel.deleteSugestao(id);
+                            btn.closest('div').remove();
+                            if (list.children.length === 0) {
+                                list.innerHTML = '<p style="color: var(--color-text-muted); text-align: center;">Nenhuma sugestão ainda.</p>';
+                            }
+                        });
+                    });
+                } catch (err) {
+                    list.innerHTML = '<p style="color: var(--color-danger); text-align: center;">Erro ao carregar sugestões.</p>';
+                }
+            });
+        }
     }
 
     setAdminMode(active) {
         this.isAdmin = active;
+        const btnFooterAddSong = document.getElementById('btnFooterAddSong');
+        
         if (active) {
             document.body.classList.add('admin-mode');
             localStorage.setItem('isAdmin', 'true');
+            if (btnFooterAddSong) btnFooterAddSong.style.display = 'flex';
         } else {
             document.body.classList.remove('admin-mode');
             localStorage.removeItem('isAdmin');
+            if (btnFooterAddSong) btnFooterAddSong.style.display = 'none';
         }
     }
 
@@ -581,6 +706,26 @@ export class MainController {
         if (localStorage.getItem('isAdmin') === 'true') {
             this.setAdminMode(true);
         }
+
+        // Load version from changelog into Sobre modal
+        try {
+            const sobreVersion = document.getElementById('sobreVersion');
+            if (sobreVersion && window.CHANGELOG) {
+                sobreVersion.textContent = `Versão ${window.CHANGELOG.version}`;
+            }
+            const sobreAppName = document.getElementById('sobreAppName');
+            if (sobreAppName && settings.brandTitle) {
+                sobreAppName.textContent = settings.brandTitle;
+            }
+            const sobreLogoImg = document.getElementById('sobreLogoImg');
+            const sobreLogoIcon = document.getElementById('sobreLogoIcon');
+            if (settings.customLogo && sobreLogoImg) {
+                sobreLogoImg.src = settings.customLogo;
+                sobreLogoImg.style.display = 'block';
+                if (sobreLogoIcon) sobreLogoIcon.style.display = 'none';
+            }
+        } catch (e) { /* changelog not loaded */ }
+
         await this.loadData();
         await this.loadPresets();
         this.bindYouTubeModalEvents();
@@ -1007,6 +1152,9 @@ export class MainController {
         try {
             const repertorio = await SongModel.getRepertorio(periodoId);
             this.currentRepertorio = repertorio;
+            if (repertorio && repertorio.periodo) {
+                this.homeView.setSelectedPeriodo(periodoId, repertorio.periodo);
+            }
             this.homeView.renderRepertorio(repertorio);
         } catch (error) {
             console.error("Erro ao carregar repertório:", error);
@@ -1014,33 +1162,16 @@ export class MainController {
         }
     }
 
-    handleCriarPeriodo(inicioStr, fimStr) {
-        const formatarData = (d) => {
-            const dia = String(d.getDate()).padStart(2, '0');
-            const mes = String(d.getMonth() + 1).padStart(2, '0');
-            const ano = d.getFullYear();
-            return `${dia}/${mes}/${ano}`;
-        };
+    handleSalvarPeriodo(nome) {
+        // Gera ID baseado no nome (slugify simples)
+        const id = nome
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '')
+            + '_' + Date.now();
 
-        const formatarDataId = (d) => {
-            const dia = String(d.getDate()).padStart(2, '0');
-            const mes = String(d.getMonth() + 1).padStart(2, '0');
-            const ano = d.getFullYear();
-            return `${dia}-${mes}-${ano}`;
-        };
-
-        const inicio = new Date(inicioStr + 'T12:00:00');
-        const fim = new Date(fimStr + 'T12:00:00');
-
-        if (fim < inicio) {
-            showToast("A data final deve ser após a data inicial", "error");
-            return;
-        }
-
-        const periodo = `De ${formatarData(inicio)} a ${formatarData(fim)}`;
-        const id = `${formatarDataId(inicio)}_${formatarDataId(fim)}`;
-
-        this._criarOuCarregarPeriodo(id, periodo);
+        this._criarOuCarregarPeriodo(id, nome);
     }
 
     async _criarOuCarregarPeriodo(id, periodo) {
@@ -1050,7 +1181,7 @@ export class MainController {
             if (!existente) {
                 await SongModel.createRepertorio(id, periodo);
             }
-            this.homeView.setSelectedPeriodo(id);
+            this.homeView.setSelectedPeriodo(id, periodo);
             await this.loadPeriodos();
             await this.handlePeriodoChange(id);
         } catch (error) {
@@ -1075,7 +1206,16 @@ export class MainController {
             this.currentRepertorio = null;
             this.homeView.currentPeriodo = null;
             this.homeView.periodoSelect.value = '';
+            this.homeView.periodoDataInicio.value = '';
+            this.homeView.periodoDataFim.value = '';
+            this.homeView.periodoMes.value = '';
             await this.loadPeriodos();
+
+            // Limpa as listas renderizadas
+            document.querySelectorAll('.songs-list-repertorio').forEach(el => {
+                el.innerHTML = '<div class="empty-state-small"><p>Nenhuma música adicionada</p></div>';
+            });
+
             showToast("Período deletado!");
         } catch (error) {
             console.error("Erro ao deletar período:", error);
@@ -1179,7 +1319,6 @@ export class MainController {
 
     async _addSongToRepertorio(song, dia, secao, modal) {
         try {
-            // Pega vocalConfigs da música para popular dropdowns
             const vocalConfigs = (song.vocalConfigs || []).map(vc => ({
                 vocalist: vc.vocalist,
                 key: vc.key
@@ -1194,11 +1333,16 @@ export class MainController {
                 vocalConfigs: vocalConfigs
             };
 
-            await SongModel.addMusicaRepertorio(this.homeView.currentPeriodo, dia, secao, musica);
-            
-            const repertorio = await SongModel.getRepertorio(this.homeView.currentPeriodo);
-            this.homeView.renderRepertorio(repertorio);
-            
+            // Atualiza localmente PRIMEIRO
+            if (!this.currentRepertorio[dia]) this.currentRepertorio[dia] = {};
+            if (!this.currentRepertorio[dia][secao]) this.currentRepertorio[dia][secao] = [];
+            this.currentRepertorio[dia][secao].push(musica);
+
+            // Salva o estado LOCAL no Firestore (não lê do Firestore)
+            await SongModel.saveRepertorio(this.homeView.currentPeriodo, this.currentRepertorio);
+
+            this.homeView.renderRepertorio(this.currentRepertorio);
+
             modal.remove();
             showToast("Música adicionada ao repertório!");
         } catch (error) {
@@ -1207,13 +1351,127 @@ export class MainController {
         }
     }
 
+    async handleReplaceSongRepertorio(dia, secao, index) {
+        if (!this.homeView.currentPeriodo) return;
+
+        const secaoTipoMap = {
+            'adoracao': 'adoracao',
+            'oferta': 'louvor',
+            'louvor': 'louvor',
+            'pos-palavra': 'adoracao',
+            'ceia': 'adoracao'
+        };
+        const tipoFiltro = secaoTipoMap[secao] || 'louvor';
+
+        const allSongs = await SongModel.getAllSongs();
+        const songs = allSongs.filter(s => s.type === tipoFiltro);
+        if (songs.length === 0) {
+            showToast("Nenhuma música nesta categoria", "error");
+            return;
+        }
+
+        const musicaAtual = this.currentRepertorio?.[dia]?.[secao]?.[index];
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2>Trocar Música</h2>
+                    <button class="btn-icon close-modal" aria-label="Fechar">
+                        <i class="ph ph-x"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                    <input type="text" id="searchSongReplace" placeholder="Buscar música..." class="search-input" style="width: 100%; margin-bottom: 12px;">
+                    <div id="songsReplaceList"></div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const listContainer = modal.querySelector('#songsReplaceList');
+        const searchInput = modal.querySelector('#searchSongReplace');
+
+        const renderSongs = (filter = '') => {
+            const filtered = filter
+                ? songs.filter(s => s.title.toLowerCase().includes(filter.toLowerCase()))
+                : songs;
+
+            listContainer.innerHTML = '';
+            filtered.forEach(song => {
+                const item = document.createElement('div');
+                item.className = 'song-select-item';
+                item.style.cssText = 'padding: 12px; border-bottom: 1px solid var(--color-border); cursor: pointer; display: flex; justify-content: space-between; align-items: center;';
+                const isCurrent = musicaAtual && musicaAtual.id === song.id;
+                item.innerHTML = `
+                    <div>
+                        <div style="font-weight: 500; ${isCurrent ? 'color: var(--color-brand-primary);' : ''}">${song.title} ${isCurrent ? '(atual)' : ''}</div>
+                        <div style="font-size: 0.8rem; color: var(--color-text-muted);">${song.artist || ''}</div>
+                    </div>
+                    <i class="ph ph-arrow-circle-right" style="font-size: 1.2rem; color: var(--color-brand-primary);"></i>
+                `;
+                item.addEventListener('click', () => this._replaceSongInRepertorio(song, dia, secao, index, modal));
+                listContainer.appendChild(item);
+            });
+        };
+
+        renderSongs();
+        searchInput.addEventListener('input', () => renderSongs(searchInput.value));
+
+        modal.querySelector('.close-modal').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    }
+
+    async _replaceSongInRepertorio(newSong, dia, secao, index, modal) {
+        try {
+            const vocalConfigs = (newSong.vocalConfigs || []).map(vc => ({
+                vocalist: vc.vocalist,
+                key: vc.key
+            }));
+
+            const musica = {
+                id: newSong.id,
+                titulo: newSong.title,
+                artista: newSong.artist,
+                vocalista: '',
+                tom: newSong.key || '',
+                vocalConfigs: vocalConfigs
+            };
+
+            // Atualiza localmente
+            if (this.currentRepertorio?.[dia]?.[secao]) {
+                this.currentRepertorio[dia][secao][index] = musica;
+            }
+
+            // Salva o estado LOCAL no Firestore
+            await SongModel.saveRepertorio(this.homeView.currentPeriodo, this.currentRepertorio);
+
+            this.homeView.renderRepertorio(this.currentRepertorio);
+            modal.remove();
+            showToast("Música trocada!");
+        } catch (error) {
+            console.error("Erro ao trocar música:", error);
+            showToast("Erro ao trocar música", "error");
+        }
+    }
+
     async handleRemoveSongRepertorio(dia, secao, index) {
         if (!this.homeView.currentPeriodo) return;
 
         try {
-            await SongModel.removeMusicaRepertorio(this.homeView.currentPeriodo, dia, secao, index);
-            const repertorio = await SongModel.getRepertorio(this.homeView.currentPeriodo);
-            this.homeView.renderRepertorio(repertorio);
+            // Remove localmente primeiro
+            if (this.currentRepertorio?.[dia]?.[secao]) {
+                this.currentRepertorio[dia][secao].splice(index, 1);
+            }
+
+            // Salva o estado LOCAL no Firestore
+            await SongModel.saveRepertorio(this.homeView.currentPeriodo, this.currentRepertorio);
+
+            this.homeView.renderRepertorio(this.currentRepertorio);
             showToast("Música removida!");
         } catch (error) {
             console.error("Erro ao remover música:", error);
@@ -1224,13 +1482,21 @@ export class MainController {
     async handleRepertorioFieldChange(dia, secao, index, field, value) {
         if (!this.homeView.currentPeriodo) return;
 
-        try {
-            await SongModel.updateMusicaRepertorio(this.homeView.currentPeriodo, dia, secao, index, field, value);
-            const repertorio = await SongModel.getRepertorio(this.homeView.currentPeriodo);
-            this.currentRepertorio = repertorio;
-        } catch (error) {
-            console.error("Erro ao atualizar campo:", error);
+        // Atualiza localmente IMEDIATAMENTE para não perder dados
+        if (this.currentRepertorio && this.currentRepertorio[dia]?.[secao]?.[index]) {
+            this.currentRepertorio[dia][secao][index][field] = value;
+            if (field === 'vocalista' && value) {
+                const musica = this.currentRepertorio[dia][secao][index];
+                if (musica.vocalConfigs) {
+                    const vc = musica.vocalConfigs.find(v => v.vocalist === value);
+                    if (vc) musica.tom = vc.key;
+                }
+            }
         }
+
+        // Salva Firestore em background (sem await)
+        SongModel.updateMusicaRepertorio(this.homeView.currentPeriodo, dia, secao, index, field, value)
+            .catch(error => console.error("Erro ao atualizar campo:", error));
     }
 
     async handleCompartilhar() {
@@ -1239,68 +1505,14 @@ export class MainController {
             return;
         }
 
-        const repertorio = this.currentRepertorio;
         const periodo = this.homeView.periodoSelect?.options[this.homeView.periodoSelect.selectedIndex]?.text || '';
-        
-        const formatarSecao = (nome, musicas) => {
-            if (!musicas || musicas.length === 0) return '';
-            let texto = `\n*${nome.toUpperCase()}:*\n`;
-            musicas.forEach(m => {
-                texto += `• ${m.titulo}`;
-                if (m.vocalista) texto += ` - Vocal: ${m.vocalista}`;
-                if (m.tom) texto += ` (Tom: ${m.tom})`;
-                texto += '\n';
-            });
-            return texto;
-        };
-
-        let mensagem = `🎵 *Repertório da Semana (${periodo})*\n`;
-        mensagem += `Ministério de Louvor Kerigma\n`;
-        mensagem += `\n━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-
-        // Quarta
-        if (repertorio.quarta) {
-            mensagem += `\n📅 *QUARTA-FEIRA*\n`;
-            mensagem += formatarSecao('Adoração', repertorio.quarta.adoracao);
-            mensagem += formatarSecao('Oferta', repertorio.quarta.oferta);
-            mensagem += formatarSecao('Louvor', repertorio.quarta.louvor);
-        }
-
-        // Sábado
-        if (repertorio.sabado) {
-            mensagem += `\n📅 *SÁBADO*\n`;
-            mensagem += formatarSecao('Adoração', repertorio.sabado.adoracao);
-            mensagem += formatarSecao('Oferta', repertorio.sabado.oferta);
-            mensagem += formatarSecao('Louvor', repertorio.sabado.louvor);
-        }
-
-        // EBD
-        if (repertorio.ebd) {
-            mensagem += `\n📅 *EBD*\n`;
-            mensagem += formatarSecao('Adoração', repertorio.ebd.adoracao);
-            mensagem += formatarSecao('Oferta', repertorio.ebd.oferta);
-            mensagem += formatarSecao('Louvor', repertorio.ebd.louvor);
-        }
-
-        // Domingo
-        if (repertorio.domingo) {
-            mensagem += `\n📅 *DOMINGO À NOITE*\n`;
-            mensagem += formatarSecao('Adoração', repertorio.domingo.adoracao);
-            mensagem += formatarSecao('Oferta', repertorio.domingo.oferta);
-            if (repertorio.domingo.posPalavraAtivo) {
-                mensagem += formatarSecao('Pós-Palavra', repertorio.domingo['pos-palavra']);
-            }
-            if (repertorio.domingo.ceiaAtivo) {
-                mensagem += formatarSecao('Ceia', repertorio.domingo.ceia);
-            }
-            mensagem += formatarSecao('Louvor', repertorio.domingo.louvor);
-        }
-
         const url = window.location.origin + window.location.pathname + `?rep=${this.homeView.currentPeriodo}`;
-        mensagem += `\n━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        mensagem += `\n🔗 *Acesse o repertório completo:*\n${url}`;
 
-        // Envia para WhatsApp
+        let mensagem = `*Repertório da Semana (${periodo})*\n`;
+        mensagem += `Ministério de Louvor Kerigma\n`;
+        mensagem += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        mensagem += `\n*Acesse o repertório completo:*\n${url}`;
+
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
         window.open(whatsappUrl, '_blank');
     }

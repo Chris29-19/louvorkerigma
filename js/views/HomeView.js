@@ -16,7 +16,6 @@ export class HomeView {
         this.clearSearchLouvor = document.getElementById('clearSearchLouvor');
         this.searchBarLouvor = document.getElementById('searchBarLouvor');
 
-        this.btnAddSong = document.getElementById('btnAddSong');
         this.btnThemeToggle = document.getElementById('btnThemeToggle');
         this.brandLogoImg = document.getElementById('brandLogoImg');
         this.brandLogoIcon = document.getElementById('brandLogoIcon');
@@ -31,7 +30,8 @@ export class HomeView {
         this.periodoSelect = document.getElementById('periodoSelect');
         this.periodoDataInicio = document.getElementById('periodoDataInicio');
         this.periodoDataFim = document.getElementById('periodoDataFim');
-        this.btnCriarPeriodo = document.getElementById('btnCriarPeriodo');
+        this.periodoMes = document.getElementById('periodoMes');
+        this.btnSalvarPeriodo = document.getElementById('btnSalvarPeriodo');
         this.btnDeletarPeriodo = document.getElementById('btnDeletarPeriodo');
         this.btnCompartilhar = document.getElementById('btnCompartilhar');
         this.subTabBtns = document.querySelectorAll('.sub-tab-btn');
@@ -221,9 +221,6 @@ export class HomeView {
         if (this.btnThemeToggle) {
             this.btnThemeToggle.addEventListener('click', () => handlers.onThemeToggle());
         }
-        if (this.btnAddSong) {
-            this.btnAddSong.addEventListener('click', () => handlers.onAddSongClick());
-        }
 
         if (this.songsListAdoracao) this._bindListActions(this.songsListAdoracao, handlers);
         if (this.songsListLouvor) this._bindListActions(this.songsListLouvor, handlers);
@@ -234,19 +231,26 @@ export class HomeView {
         if (this.periodoSelect) {
             this.periodoSelect.addEventListener('change', () => {
                 if (this.periodoSelect.value) {
+                    const selectedOption = this.periodoSelect.options[this.periodoSelect.selectedIndex];
+                    if (selectedOption) {
+                        this.setSelectedPeriodo(this.periodoSelect.value, selectedOption.textContent);
+                    }
                     handlers.onPeriodoChange(this.periodoSelect.value);
                 }
             });
         }
-        if (this.btnCriarPeriodo) {
-            this.btnCriarPeriodo.addEventListener('click', () => {
-                const inicio = this.periodoDataInicio?.value;
-                const fim = this.periodoDataFim?.value;
-                if (!inicio || !fim) {
-                    handlers.onShowToast('Selecione as datas inicial e final', 'error');
+        if (this.btnSalvarPeriodo) {
+            this.btnSalvarPeriodo.addEventListener('click', () => {
+                const diaInicio = this.periodoDataInicio?.value?.trim();
+                const diaFim = this.periodoDataFim?.value?.trim();
+                const mes = this.periodoMes?.value;
+                if (!diaInicio || !diaFim || !mes) {
+                    handlers.onShowToast('Preencha os dias e o mês', 'error');
                     return;
                 }
-                handlers.onCriarPeriodo(inicio, fim);
+                const mesNomes = { '01':'JAN','02':'FEV','03':'MAR','04':'ABR','05':'MAI','06':'JUN','07':'JUL','08':'AGO','09':'SET','10':'OUT','11':'NOV','12':'DEZ' };
+                const nome = `${diaInicio} a ${diaFim} ${mesNomes[mes]}`;
+                handlers.onSalvarPeriodo(nome);
             });
         }
         if (this.btnDeletarPeriodo) {
@@ -306,11 +310,13 @@ export class HomeView {
             if (deleteBtn) {
                 e.stopPropagation();
                 deleteBtn.closest('.menu-dropdown-repertorio').style.display = 'none';
-                handlers.onRemoveSongRepertorio(
-                    deleteBtn.dataset.dia,
-                    deleteBtn.dataset.secao,
-                    parseInt(deleteBtn.dataset.index)
-                );
+                this._showConfirmModal('Tem certeza que deseja remover esta música?', () => {
+                    handlers.onRemoveSongRepertorio(
+                        deleteBtn.dataset.dia,
+                        deleteBtn.dataset.secao,
+                        parseInt(deleteBtn.dataset.index)
+                    );
+                });
                 return;
             }
 
@@ -320,16 +326,128 @@ export class HomeView {
 
         // Dropdowns de vocal e tom no repertório
         document.addEventListener('change', (e) => {
-            if (e.target.classList.contains('rep-vocal-select') || e.target.classList.contains('rep-key-select')) {
+            if (e.target.classList.contains('rep-vocal-select')) {
+                const select = e.target;
+                const dia = select.dataset.dia;
+                const secao = select.dataset.secao;
+                const index = parseInt(select.dataset.index);
+
+                // Auto-preenche o tom no select visual
+                const keySelect = select.closest('.song-right-repertorio').querySelector('.rep-key-select');
+                if (keySelect && this._currentRepertorio) {
+                    const musicas = this._currentRepertorio[dia]?.[secao] || [];
+                    const musica = musicas[index];
+                    if (musica && musica.vocalConfigs) {
+                        const vc = musica.vocalConfigs.find(v => v.vocalist === select.value);
+                        if (vc) {
+                            keySelect.value = vc.key || '';
+                        }
+                    }
+                }
+
+                // updateMusicaRepertorio já salva vocalista E auto-preenche tom
+                handlers.onRepertorioFieldChange(dia, secao, index, 'vocalista', select.value);
+            } else if (e.target.classList.contains('rep-key-select')) {
                 const select = e.target;
                 handlers.onRepertorioFieldChange(
                     select.dataset.dia,
                     select.dataset.secao,
                     parseInt(select.dataset.index),
-                    select.classList.contains('rep-vocal-select') ? 'vocalista' : 'tom',
+                    'tom',
                     select.value
                 );
             }
+        });
+
+        // Swipe para deletar + clique para trocar música
+        this._initSwipeAndTap(handlers);
+    }
+
+    _initSwipeAndTap(handlers) {
+        let startX = 0, currentX = 0, swiping = false, activeItem = null;
+
+        document.addEventListener('touchstart', (e) => {
+            const swipeContent = e.target.closest('.song-item-swipe-content');
+            if (!swipeContent) return;
+            if (e.target.closest('select') || e.target.closest('.song-menu-repertorio') || e.target.closest('.btn-menu-repertorio')) return;
+
+            const item = swipeContent.closest('.song-item-repertorio');
+            startX = e.touches[0].clientX;
+            swiping = true;
+            activeItem = item;
+
+            // Fecha outro item aberto
+            document.querySelectorAll('.song-item-repertorio.swiped').forEach(el => {
+                if (el !== item) el.classList.remove('swiped');
+            });
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!swiping || !activeItem) return;
+            currentX = e.touches[0].clientX;
+            const diff = startX - currentX;
+            const swipeContent = activeItem.querySelector('.song-item-swipe-content');
+
+            if (diff > 20) {
+                swipeContent.style.transition = 'none';
+                swipeContent.style.transform = `translateX(-${Math.min(diff, 70)}px)`;
+            } else {
+                swipeContent.style.transition = 'transform 0.2s ease';
+                swipeContent.style.transform = 'translateX(0)';
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', () => {
+            if (!swiping || !activeItem) return;
+            swiping = false;
+
+            const swipeContent = activeItem.querySelector('.song-item-swipe-content');
+            swipeContent.style.transition = 'transform 0.2s ease';
+
+            const diff = startX - currentX;
+            if (diff > 50) {
+                activeItem.classList.add('swiped');
+                swipeContent.style.transform = 'translateX(-70px)';
+            } else {
+                activeItem.classList.remove('swiped');
+                swipeContent.style.transform = 'translateX(0)';
+            }
+            activeItem = null;
+        }, { passive: true });
+
+        // Botão deletar do swipe
+        document.addEventListener('click', (e) => {
+            const deleteBtn = e.target.closest('.song-item-repertorio-delete');
+            if (deleteBtn) {
+                this._showConfirmModal('Tem certeza que deseja remover esta música?', () => {
+                    handlers.onRemoveSongRepertorio(
+                        deleteBtn.dataset.dia,
+                        deleteBtn.dataset.secao,
+                        parseInt(deleteBtn.dataset.index)
+                    );
+                });
+            }
+        });
+
+        // Clique na música para trocar
+        document.addEventListener('click', (e) => {
+            const swipeContent = e.target.closest('.song-item-swipe-content');
+            if (!swipeContent) return;
+            if (e.target.closest('select') || e.target.closest('.song-menu-repertorio') || e.target.closest('.btn-menu-repertorio')) return;
+
+            // Se o item está swiped (aberto), fecha ao invés de trocar
+            const item = swipeContent.closest('.song-item-repertorio');
+            if (item && item.classList.contains('swiped')) {
+                item.classList.remove('swiped');
+                swipeContent.style.transform = 'translateX(0)';
+                return;
+            }
+
+            handlers.onReplaceSongRepertorio(
+                swipeContent.dataset.dia,
+                swipeContent.dataset.secao,
+                parseInt(swipeContent.dataset.index)
+            );
         });
     }
 
@@ -494,6 +612,34 @@ export class HomeView {
         }
     }
 
+    _showConfirmModal(mensagem, onConfirm) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 320px; text-align: center;">
+                <div class="modal-body" style="padding: 24px 20px 16px;">
+                    <i class="ph ph-warning-circle" style="font-size: 2rem; color: #EF4444; display: block; margin-bottom: 12px;"></i>
+                    <p style="font-size: 0.95rem; margin: 0 0 20px; color: var(--color-text-primary);">${mensagem}</p>
+                    <div style="display: flex; gap: 12px; justify-content: center;">
+                        <button class="btn btn-secondary confirm-cancel" style="flex: 1;">Cancelar</button>
+                        <button class="btn btn-danger confirm-ok" style="flex: 1; background: #EF4444; color: #fff; border: none;">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        modal.querySelector('.confirm-cancel').addEventListener('click', () => modal.remove());
+        modal.querySelector('.confirm-ok').addEventListener('click', () => {
+            modal.remove();
+            onConfirm();
+        });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    }
+
     escapeHTML(str) {
         if (!str) return '';
         const div = document.createElement('div');
@@ -523,22 +669,34 @@ export class HomeView {
         });
     }
 
-    setSelectedPeriodo(periodoId) {
+    setSelectedPeriodo(periodoId, periodoNome) {
         this.currentPeriodo = periodoId;
         if (this.periodoSelect) {
             this.periodoSelect.value = periodoId;
+        }
+        // Preenche os campos de data a partir do nome do período
+        if (periodoNome && this.periodoDataInicio && this.periodoDataFim && this.periodoMes) {
+            const match = periodoNome.match(/^(\d{1,2})\s+a\s+(\d{1,2})\s+(\w+)$/i);
+            if (match) {
+                this.periodoDataInicio.value = match[1];
+                this.periodoDataFim.value = match[2];
+                const mesMap = { 'JAN':'01','FEV':'02','MAR':'03','ABR':'04','MAI':'05','JUN':'06','JUL':'07','AGO':'08','SET':'09','OUT':'10','NOV':'11','DEZ':'12' };
+                this.periodoMes.value = mesMap[match[3].toUpperCase()] || '';
+            }
         }
     }
 
     renderRepertorio(repertorio) {
         if (!repertorio) return;
+        this._currentRepertorio = repertorio;
 
         const dias = ['quarta', 'sabado', 'ebd', 'domingo'];
+        const diaAbrev = { quarta: 'Qua', sabado: 'Sab', ebd: 'Ebd', domingo: 'Dom' };
         const secoes = ['adoracao', 'oferta', 'louvor'];
 
         dias.forEach(dia => {
             secoes.forEach(secao => {
-                const containerId = `rep${this._capitalize(dia)}${this._capitalize(secao)}`;
+                const containerId = `rep${diaAbrev[dia]}${this._capitalize(secao)}`;
                 const container = document.getElementById(containerId);
                 if (container) {
                     const musicas = repertorio[dia]?.[secao] || [];
@@ -617,23 +775,28 @@ export class HomeView {
             `;
 
             item.innerHTML = `
-                <div class="song-left-repertorio">
-                    <div class="song-title-artist">
-                        <span class="song-title-repertorio">${this._esc(musica.titulo)}</span>
-                        <span class="song-artist-repertorio">${this._esc(musica.artista || '')}</span>
-                    </div>
+                <div class="song-item-repertorio-delete" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
+                    <i class="ph ph-trash"></i>
                 </div>
-                <div class="song-right-repertorio">
-                    ${vocalSelect}
-                    ${tomSelect}
-                    <div class="song-menu-repertorio" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
-                        <button class="btn-menu-repertorio" title="Opções">
-                            <i class="ph ph-dots-three-vertical"></i>
-                        </button>
-                        <div class="menu-dropdown-repertorio" style="display:none;">
-                            <button class="menu-option-repertorio menu-delete-repertorio" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
-                                <i class="ph ph-trash"></i> Remover
+                <div class="song-item-swipe-content" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
+                    <div class="song-left-repertorio">
+                        <div class="song-title-artist">
+                            <span class="song-title-repertorio">${this._esc(musica.titulo)}</span>
+                            <span class="song-artist-repertorio">${this._esc(musica.artista || '')}</span>
+                        </div>
+                    </div>
+                    <div class="song-right-repertorio">
+                        ${vocalSelect}
+                        ${tomSelect}
+                        <div class="song-menu-repertorio" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
+                            <button class="btn-menu-repertorio" title="Opções">
+                                <i class="ph ph-dots-three-vertical"></i>
                             </button>
+                            <div class="menu-dropdown-repertorio" style="display:none;">
+                                <button class="menu-option-repertorio menu-delete-repertorio" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
+                                    <i class="ph ph-trash"></i> Remover
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

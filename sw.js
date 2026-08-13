@@ -1,4 +1,4 @@
-const CACHE_NAME = 'louvorapp-v12';
+const CACHE_NAME = 'louvorapp-v26';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -7,6 +7,7 @@ const ASSETS_TO_CACHE = [
     './css/layout.css',
     './css/components.css',
     './js/app.js',
+    './js/changelog.js',
     './js/controllers/MainController.js',
     './js/models/SongModel.js',
     './js/views/HomeView.js',
