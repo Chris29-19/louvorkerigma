@@ -1,6 +1,12 @@
-export const CURRENT_VERSION = '2.31.2';
+export const CURRENT_VERSION = '2.32.0';
 
 export const CHANGELOG = {
+    '2.32.0': [
+        'Chat IA agora conversa de forma natural (como Gemini/ChatGPT)',
+        'Sugestões de músicas com cantor e vocalista',
+        'Chips de sugestão removidos',
+        'Chat acima da seta voltar ao topo e sem cortar o campo de texto'
+    ],
     '2.31.2': [
         'Busca IA corrigida: modelos Gemini atualizados',
         'Fallback automático entre modelos da IA (mais estabilidade)'

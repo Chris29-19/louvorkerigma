@@ -1603,7 +1603,6 @@ export class MainController {
         const btnClear= document.getElementById('btnClearAiChat');
         const input   = document.getElementById('aiChatInput');
         const sendBtn = document.getElementById('btnAiSend');
-        const chips   = document.querySelectorAll('.ai-chip');
 
         if (!modal) return;
 
@@ -1652,16 +1651,6 @@ export class MainController {
         // Send button
         if (sendBtn) sendBtn.addEventListener('click', () => this._sendAiMessage());
 
-        // Quick chips
-        chips.forEach(chip => {
-            chip.addEventListener('click', () => {
-                if (!input) return;
-                input.value = chip.dataset.prompt;
-                input.dispatchEvent(new Event('input'));
-                this._sendAiMessage();
-            });
-        });
-
         this._updateAiKeyWarning();
     }
 
@@ -1697,28 +1686,20 @@ export class MainController {
                 }${tom ? ` | Tom: ${tom}` : ''}${vocais.length ? ` | Vocalistas: ${vocais.join(', ')}` : ''}${s.lyrics ? ` | Com letra cadastrada` : ''}`;
             }).join('\n');
 
-            const systemPrompt = `Você é um assistente especializado em músicas de adoração cristã, gospel e louvor brasileiro. 
-Sua função é ajudar líderes de louvor a encontrar músicas ideais para cultos e momentos específicos.
+            const systemPrompt = `Você é a "Assistente do Louvor", uma parceira inteligente e conversacional de líderes de louvor da igreja. Você conversa de forma natural, amigável e prestativa — como o Gemini ou ChatGPT.
 
-O usuário tem as seguintes músicas cadastradas no repertório do ministério:
+O repertório do ministério (músicas cadastradas no app):
 ${songContext || '(Nenhuma música cadastrada ainda)'}
 
-Ao responder:
-1. SEMPRE priorize músicas que ESTÃO no repertório do usuário (cite o título exato)
-2. Também sugira até 5 músicas externas populares (gospel/adoração) que combinem com o tema
-3. Para cada música, explique brevemente por que ela combina com o tema
-4. Seja conciso e objetivo
-5. Responda em português do Brasil
-6. Estruture a resposta em JSON com este formato EXATO (não adicione texto fora do JSON):
-{
-  "comment": "Texto introdutório curto explicando a seleção (1-2 frases)",
-  "from_repertoire": [
-    { "title": "Nome da música", "artist": "Artista", "reason": "Motivo curto" }
-  ],
-  "external": [
-    { "title": "Nome da música", "artist": "Artista", "reason": "Motivo curto" }
-  ]
-}`;
+Como se comportar:
+1. Converse de forma natural e fluida em português do Brasil. Pode responder perguntas gerais, conversar sobre temas de culto, versículos, momentos da liturgia e dar dicas para o ministério.
+2. NUNCA use JSON nem formato de programação. Escreva como uma pessoa normal conversando.
+3. Quando sugerir músicas, liste cada uma no formato:
+   **Título da Música** — Nome do Cantor/Banda (vocal: Nome do Vocalista)
+4. Sempre que possível, priorize músicas que JÁ ESTÃO no repertório do ministério (marque com ✓ no app). Depois sugira externas conhecidas do gospel/adoração brasileiro.
+5. Use os vocalistas exatamente como informados no repertório — NUNCA invente vocalistas.
+6. Seja objetiva: use listas quando for sugerir várias músicas e explique em uma frase por que cada uma combina com o pedido.
+7. Se não souber alguma música, admita e sugira alternativas parecidas.`;
 
             // Build conversation history for Gemini
             const contents = [
@@ -1764,9 +1745,9 @@ Ao responder:
             // Keep history lean (last 10 turns)
             if (this._aiChatHistory.length > 20) this._aiChatHistory = this._aiChatHistory.slice(-20);
 
-            // Parse JSON response
+            // Render conversational response (markdown-lite)
             this._removeTyping(typingId);
-            await this._renderAiResponse(rawText, allSongs);
+            this._appendRichMessage('assistant', rawText);
 
         } catch (err) {
             this._removeTyping(typingId);
@@ -1784,72 +1765,40 @@ Ao responder:
         }
     }
 
-    async _renderAiResponse(rawText, allSongs) {
-        // Extract JSON from response (handles markdown code blocks)
-        let parsed = null;
-        try {
-            const match = rawText.match(/```(?:json)?\s*([\s\S]*?)```/) || rawText.match(/({[\s\S]*})/);
-            const jsonStr = match ? match[1] : rawText;
-            parsed = JSON.parse(jsonStr.trim());
-        } catch (e) {
-            // If not valid JSON, show as plain text
-            this._appendMessage('assistant', rawText);
-            return;
-        }
-
+    _appendRichMessage(role, text) {
         const msgs = document.getElementById('aiChatMessages');
         if (!msgs) return;
+        const div = document.createElement('div');
+        div.className = `ai-message ai-message-${role}`;
+        div.innerHTML = `<div class="ai-message-bubble">${this._renderAiMarkdown(text)}</div>`;
+        msgs.appendChild(div);
+        div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
 
-        const bubble = document.createElement('div');
-        bubble.className = 'ai-message ai-message-assistant';
-
-        const normalizeTitle = t => t?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-
-        // Build song cards
-        const buildCards = (songs, isLocal) => {
-            return songs.map(s => {
-                // Try to match with local DB
-                const localMatch = allSongs.find(ls => normalizeTitle(ls.title) === normalizeTitle(s.title));
-                const inApp = isLocal && localMatch;
-                return `
-                    <div class="ai-song-card ${inApp ? 'in-repertoire' : ''}">
-                        <div class="ai-song-card-icon">
-                            <i class="ph${inApp ? '-fill' : ''} ph-music-note"></i>
-                        </div>
-                        <div class="ai-song-card-info">
-                            <div class="ai-song-card-title">${this._escHtml(s.title || '')}</div>
-                            <div class="ai-song-card-artist">${this._escHtml(s.artist || '')}${s.reason ? ` · ${this._escHtml(s.reason)}` : ''}</div>
-                        </div>
-                        <span class="ai-song-card-badge ${inApp ? 'badge-in-app' : 'badge-external'}">
-                            ${inApp ? '✓ No app' : 'Externa'}
-                        </span>
-                    </div>`;
-            }).join('');
-        };
-
+    _renderAiMarkdown(text) {
+        let safe = this._escHtml(text);
+        // Negrito **texto**
+        safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // Itálico *texto*
+        safe = safe.replace(/(^|[^*\w])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+        const lines = safe.split('\n');
         let html = '';
-
-        if (parsed.comment) {
-            html += `<div class="ai-response-text"><p>${this._escHtml(parsed.comment)}</p></div>`;
+        let inList = false;
+        const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) { closeList(); continue; }
+            const bullet = trimmed.match(/^(?:[-•*]|\d+[.)])\s+(.*)$/);
+            if (bullet) {
+                if (!inList) { html += '<ul>'; inList = true; }
+                html += `<li>${bullet[1]}</li>`;
+            } else {
+                closeList();
+                html += `<p>${trimmed}</p>`;
+            }
         }
-
-        if (parsed.from_repertoire?.length) {
-            html += `<div class="ai-section-label">🎵 Do seu repertório</div>`;
-            html += `<div class="ai-song-cards">${buildCards(parsed.from_repertoire, true)}</div>`;
-        }
-
-        if (parsed.external?.length) {
-            html += `<div class="ai-section-label">🌐 Sugestões externas</div>`;
-            html += `<div class="ai-song-cards">${buildCards(parsed.external, false)}</div>`;
-        }
-
-        if (!parsed.from_repertoire?.length && !parsed.external?.length) {
-            html += `<div class="ai-response-text"><p>${this._escHtml(rawText)}</p></div>`;
-        }
-
-        bubble.innerHTML = `<div class="ai-message-bubble" style="max-width:100%;">${html}</div>`;
-        msgs.appendChild(bubble);
-        bubble.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        closeList();
+        return html || `<p>${this._escHtml(text)}</p>`;
     }
 
     _appendMessage(role, text) {

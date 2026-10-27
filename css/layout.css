@@ -1223,7 +1223,8 @@ html {
 /* Overlay: abre como bottom-sheet em mobile */
 .ai-chat-overlay {
     align-items: flex-end;
-    padding: 0;
+    padding: 0 0 62px;
+    z-index: 2000;
 }
 
 .ai-chat-overlay.active {
@@ -1400,6 +1401,27 @@ html {
     border-radius: 16px;
     font-size: 0.875rem;
     line-height: 1.5;
+}
+
+.ai-message-bubble p {
+    margin: 0 0 8px;
+}
+
+.ai-message-bubble p:last-child {
+    margin-bottom: 0;
+}
+
+.ai-message-bubble ul {
+    margin: 4px 0 8px;
+    padding-left: 18px;
+}
+
+.ai-message-bubble li {
+    margin-bottom: 6px;
+}
+
+.ai-message-bubble li:last-child {
+    margin-bottom: 0;
 }
 
 .ai-message-user .ai-message-bubble {
