@@ -1,6 +1,10 @@
-export const CURRENT_VERSION = '2.33.0';
+export const CURRENT_VERSION = '2.33.1';
 
 export const CHANGELOG = {
+    '2.33.1': [
+        'Rodapé e seta de topo escondidos enquanto o chat IA está aberto',
+        'Campo de digitar livre, sem cobertura do rodapé no celular'
+    ],
     '2.33.0': [
         'IA com vibe de igreja: respostas descontraídas e objetivas 🙏',
         'Boas-vindas "Graça e paz!"',

@@ -1223,12 +1223,18 @@ html {
 /* Overlay: abre como bottom-sheet em mobile */
 .ai-chat-overlay {
     align-items: flex-end;
-    padding: 0 0 calc(78px + env(safe-area-inset-bottom));
+    padding: 0;
     z-index: 2000;
 }
 
 .ai-chat-overlay.active {
     display: flex;
+}
+
+/* Chat IA aberto: esconde rodapé e seta de topo para não cobrir o campo de digitar */
+body.ai-chat-open .app-footer,
+body.ai-chat-open .scroll-top-btn {
+    display: none !important;
 }
 
 /* Painel principal */

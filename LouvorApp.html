@@ -1353,12 +1353,18 @@ html {
 /* Overlay: abre como bottom-sheet em mobile */
 .ai-chat-overlay {
     align-items: flex-end;
-    padding: 0 0 calc(78px + env(safe-area-inset-bottom));
+    padding: 0;
     z-index: 2000;
 }
 
 .ai-chat-overlay.active {
     display: flex;
+}
+
+/* Chat IA aberto: esconde rodapé e seta de topo para não cobrir o campo de digitar */
+body.ai-chat-open .app-footer,
+body.ai-chat-open .scroll-top-btn {
+    display: none !important;
 }
 
 /* Painel principal */
@@ -6499,13 +6505,18 @@ class MainController {
         if (btnOpen) {
             btnOpen.addEventListener('click', () => {
                 modal.classList.add('active');
+                document.body.classList.add('ai-chat-open'); // esconde rodapé e seta de topo
                 this._updateAiKeyWarning();
                 setTimeout(() => input?.focus(), 300);
             });
         }
         // Close
-        if (btnClose) btnClose.addEventListener('click', () => modal.classList.remove('active'));
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+        const closeAiChat = () => {
+            modal.classList.remove('active');
+            document.body.classList.remove('ai-chat-open');
+        };
+        if (btnClose) btnClose.addEventListener('click', closeAiChat);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeAiChat(); });
         // Clear conversation
         if (btnClear) {
             btnClear.addEventListener('click', () => {

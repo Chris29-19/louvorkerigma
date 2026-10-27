@@ -1610,14 +1610,19 @@ export class MainController {
         if (btnOpen) {
             btnOpen.addEventListener('click', () => {
                 modal.classList.add('active');
+                document.body.classList.add('ai-chat-open'); // esconde rodapé e seta de topo
                 this._updateAiKeyWarning();
                 setTimeout(() => input?.focus(), 300);
             });
         }
 
         // Close
-        if (btnClose) btnClose.addEventListener('click', () => modal.classList.remove('active'));
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+        const closeAiChat = () => {
+            modal.classList.remove('active');
+            document.body.classList.remove('ai-chat-open');
+        };
+        if (btnClose) btnClose.addEventListener('click', closeAiChat);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeAiChat(); });
 
         // Clear conversation
         if (btnClear) {
