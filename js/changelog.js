@@ -1,6 +1,12 @@
-export const CURRENT_VERSION = '2.32.0';
+export const CURRENT_VERSION = '2.33.0';
 
 export const CHANGELOG = {
+    '2.33.0': [
+        'IA com vibe de igreja: respostas descontraídas e objetivas 🙏',
+        'Boas-vindas "Graça e paz!"',
+        'Corrigido corte do campo de digitar',
+        'Atualizações do app aplicam na hora (sem cache velho)'
+    ],
     '2.32.0': [
         'Chat IA agora conversa de forma natural (como Gemini/ChatGPT)',
         'Sugestões de músicas com cantor e vocalista',

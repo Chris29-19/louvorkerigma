@@ -1223,7 +1223,7 @@ html {
 /* Overlay: abre como bottom-sheet em mobile */
 .ai-chat-overlay {
     align-items: flex-end;
-    padding: 0 0 62px;
+    padding: 0 0 calc(78px + env(safe-area-inset-bottom));
     z-index: 2000;
 }
 

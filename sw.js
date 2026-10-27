@@ -1,4 +1,4 @@
-const CACHE_NAME = 'louvorapp-v30';
+const CACHE_NAME = 'louvorapp-v31';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -69,24 +69,9 @@ self.addEventListener('fetch', event => {
                 })
                 .catch(() => caches.match(event.request))
         );
-    } else if (isLocalAsset && isAsset) {
-        // LOCAL ASSETS (JS, CSS, images): Stale While Revalidate
-        // Serve from cache immediately, update in background
-        event.respondWith(
-            caches.open(CACHE_NAME).then(cache => {
-                return cache.match(event.request).then(cachedResponse => {
-                    const fetchPromise = fetch(event.request).then(networkResponse => {
-                        if (networkResponse && networkResponse.status === 200) {
-                            cache.put(event.request, networkResponse.clone());
-                        }
-                        return networkResponse;
-                    });
-                    return cachedResponse || fetchPromise;
-                });
-            })
-        );
     } else if (isLocalAsset) {
-        // OTHER LOCAL (JSON, etc): Network First
+        // LOCAL ASSETS (JS, CSS, images): Network First
+        // Sempre busca a versão mais nova; cache só como fallback offline
         event.respondWith(
             fetch(event.request)
                 .then(networkResponse => {

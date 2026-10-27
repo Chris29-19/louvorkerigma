@@ -1627,7 +1627,8 @@ export class MainController {
                 if (msgs) msgs.innerHTML = `
                     <div class="ai-message ai-message-assistant ai-welcome">
                         <div class="ai-message-bubble">
-                            <p>Conversa reiniciada. 👋 Descreva um <strong>tema, versículo, sentimento</strong> e vou sugerir músicas perfeitas!</p>
+                            <p>Graça e paz! 🙏</p>
+                            <p>Conversa reiniciada. Diga um tema, versículo, sentimento ou qualquer ideia, e vou te sugerir músicas ideais.</p>
                         </div>
                     </div>`;
             });
@@ -1686,20 +1687,20 @@ export class MainController {
                 }${tom ? ` | Tom: ${tom}` : ''}${vocais.length ? ` | Vocalistas: ${vocais.join(', ')}` : ''}${s.lyrics ? ` | Com letra cadastrada` : ''}`;
             }).join('\n');
 
-            const systemPrompt = `Você é a "Assistente do Louvor", uma parceira inteligente e conversacional de líderes de louvor da igreja. Você conversa de forma natural, amigável e prestativa — como o Gemini ou ChatGPT.
+            const systemPrompt = `Você é a "Assistente do Louvor": uma crente alegre, bem-humorada e calorosa, que ama louvor e ajuda líderes de louvor da igreja. Você conversa como uma irmã de igreja no zap: descontraída, direta ao ponto e amigável — sempre numa boa, com vibe de "Graça e paz!". Sempre em português do Brasil.
 
 O repertório do ministério (músicas cadastradas no app):
 ${songContext || '(Nenhuma música cadastrada ainda)'}
 
-Como se comportar:
-1. Converse de forma natural e fluida em português do Brasil. Pode responder perguntas gerais, conversar sobre temas de culto, versículos, momentos da liturgia e dar dicas para o ministério.
-2. NUNCA use JSON nem formato de programação. Escreva como uma pessoa normal conversando.
-3. Quando sugerir músicas, liste cada uma no formato:
-   **Título da Música** — Nome do Cantor/Banda (vocal: Nome do Vocalista)
-4. Sempre que possível, priorize músicas que JÁ ESTÃO no repertório do ministério (marque com ✓ no app). Depois sugira externas conhecidas do gospel/adoração brasileiro.
-5. Use os vocalistas exatamente como informados no repertório — NUNCA invente vocalistas.
-6. Seja objetiva: use listas quando for sugerir várias músicas e explique em uma frase por que cada uma combina com o pedido.
-7. Se não souber alguma música, admita e sugira alternativas parecidas.`;
+Regras importantes:
+1. NUNCA use JSON, código, asterisco de programação nem formato técnico. Escreva como uma pessoa real conversando.
+2. Seja objetiva e descontraída: respostas curtas, com o coração. Emojis com moderação (🙏✨🎵🎶).
+3. Quando sugerir músicas, liste cada uma assim:
+**Título da Música** — Nome do Cantor/Banda (vocal: Nome do Vocalista)
+4. Priorize as músicas que JÁ ESTÃO no repertório do ministério (marque com ✓ no app) e depois sugira externas conhecidas do gospel/adoração brasileiro.
+5. Nunca invente vocalistas: use apenas os vocalistas informados no repertório.
+6. Pode bater papo sobre temas de culto, versículos, liturgia, ensaio e dicas pro ministério — e sempre tenta conectar com músicas.
+7. Se não souber alguma música, seja sincera e sugira alternativas parecidas.`;
 
             // Build conversation history for Gemini
             const contents = [
@@ -1768,9 +1769,13 @@ Como se comportar:
     _appendRichMessage(role, text) {
         const msgs = document.getElementById('aiChatMessages');
         if (!msgs) return;
+        // Rede de segurança: remove cercas de código (```json ...) se a IA gerar por engano
+        let clean = String(text || '')
+            .replace(/^\s*```(?:json|javascript|js|text)?\s*/i, '')
+            .replace(/\s*```\s*$/, '');
         const div = document.createElement('div');
         div.className = `ai-message ai-message-${role}`;
-        div.innerHTML = `<div class="ai-message-bubble">${this._renderAiMarkdown(text)}</div>`;
+        div.innerHTML = `<div class="ai-message-bubble">${this._renderAiMarkdown(clean)}</div>`;
         msgs.appendChild(div);
         div.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
