@@ -71,9 +71,6 @@
                 <button class="btn-icon" id="btnAdmin" aria-label="Administração">
                     <i class="ph ph-gear"></i>
                 </button>
-                <button class="btn-icon" id="btnThemeToggle" aria-label="Alternar Tema">
-                    <i class="ph ph-moon"></i>
-                </button>
             </div>
         </header>
 
@@ -275,7 +272,7 @@
                     <div class="sub-tab-panel" id="subtab-ebd">
                         <div class="secao-repertorio" data-secao="adoracao">
                             <div class="secao-header">
-                                <h3><i class="ph ph-hand-heart"></i> Adoração</h3>
+                                <h3><i class="ph ph-microphone-stage"></i> Cantor Cristão</h3>
                             </div>
                             <div class="songs-list-repertorio" id="repEbdAdoracao"></div>
                             <button class="btn-add-song-repertorio" data-dia="ebd" data-secao="adoracao">
@@ -600,18 +597,39 @@
                         <select id="presetKey">
                             <option value="">Tom</option>
                             <option value="C">C</option>
+                            <option value="Cm">Cm</option>
                             <option value="C#">C#</option>
+                            <option value="C#m">C#m</option>
                             <option value="Db">Db</option>
+                            <option value="Dbm">Dbm</option>
                             <option value="D">D</option>
+                            <option value="Dm">Dm</option>
+                            <option value="D#">D#</option>
+                            <option value="D#m">D#m</option>
                             <option value="Eb">Eb</option>
+                            <option value="Ebm">Ebm</option>
                             <option value="E">E</option>
+                            <option value="Em">Em</option>
                             <option value="F">F</option>
+                            <option value="Fm">Fm</option>
                             <option value="F#">F#</option>
+                            <option value="F#m">F#m</option>
+                            <option value="Gb">Gb</option>
+                            <option value="Gbm">Gbm</option>
                             <option value="G">G</option>
+                            <option value="Gm">Gm</option>
+                            <option value="G#">G#</option>
+                            <option value="G#m">G#m</option>
                             <option value="Ab">Ab</option>
+                            <option value="Abm">Abm</option>
                             <option value="A">A</option>
+                            <option value="Am">Am</option>
+                            <option value="A#">A#</option>
+                            <option value="A#m">A#m</option>
                             <option value="Bb">Bb</option>
+                            <option value="Bbm">Bbm</option>
                             <option value="B">B</option>
+                            <option value="Bm">Bm</option>
                         </select>
                     </div>
                 </div>
@@ -632,6 +650,22 @@
                 </div>
                 <button class="btn btn-secondary" id="btnSaveYoutubeApiKey" style="width: 100%; font-size: 0.75rem; margin-bottom: var(--spacing-4);">
                     <i class="ph ph-check" style="margin-right: 8px;"></i> Salvar Chave YouTube
+                </button>
+
+                <hr style="border: 0; border-top: 1px solid var(--color-border); margin: var(--spacing-4) 0;">
+
+                <label style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; display: block;">
+                    <i class="ph ph-sparkle" style="margin-right:4px; color: var(--color-brand-primary);"></i>IA — Busca Inteligente de Músicas
+                </label>
+                <div class="form-group" style="margin-bottom: var(--spacing-3);">
+                    <label for="geminiApiKey" style="font-size: 0.75rem;">Chave da API Gemini (Google AI):</label>
+                    <input type="password" id="geminiApiKey" placeholder="AIzaSy..." style="width: 100%; font-size:0.8rem;">
+                    <p style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: 4px;">
+                        Obtenha uma chave gratuita em <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+                    </p>
+                </div>
+                <button class="btn btn-secondary" id="btnSaveGeminiApiKey" style="width: 100%; font-size: 0.75rem; margin-bottom: var(--spacing-4);">
+                    <i class="ph ph-check" style="margin-right: 8px;"></i> Salvar Chave Gemini
                 </button>
 
                 <hr style="border: 0; border-top: 1px solid var(--color-border); margin: var(--spacing-4) 0;">
@@ -678,19 +712,98 @@
         </div>
     </div>
 
+    <!-- Modal Chat IA — Busca Inteligente de Músicas -->
+    <div class="modal-overlay ai-chat-overlay" id="aiChatModal" aria-hidden="true">
+        <div class="ai-chat-panel">
+            <!-- Header -->
+            <div class="ai-chat-header">
+                <div class="ai-chat-header-info">
+                    <div class="ai-avatar">
+                        <i class="ph-fill ph-sparkle"></i>
+                    </div>
+                    <div>
+                        <h2 class="ai-chat-title">Busca Inteligente</h2>
+                        <span class="ai-chat-subtitle" id="aiStatusLabel">Pronto para ajudar</span>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="btn-icon ai-clear-btn" id="btnClearAiChat" aria-label="Limpar conversa" title="Limpar conversa">
+                        <i class="ph ph-trash-simple"></i>
+                    </button>
+                    <button class="btn-icon close-modal" id="btnCloseAiChat" aria-label="Fechar">
+                        <i class="ph ph-x"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chips de sugestão rápida -->
+            <div class="ai-chips-row" id="aiChipsRow">
+                <button class="ai-chip" data-prompt="músicas sobre fé e confiança em Deus">🙏 Fé</button>
+                <button class="ai-chip" data-prompt="músicas de adoração e louvor para abertura do culto">✨ Abertura</button>
+                <button class="ai-chip" data-prompt="músicas sobre graça e misericórdia">💜 Graça</button>
+                <button class="ai-chip" data-prompt="músicas lentas de adoração para momentos de oração">🕊️ Oração</button>
+                <button class="ai-chip" data-prompt="músicas animadas e de alegria para louvor">🎶 Alegria</button>
+                <button class="ai-chip" data-prompt="músicas sobre salvação e redenção">🔥 Redenção</button>
+            </div>
+
+            <!-- Mensagens -->
+            <div class="ai-chat-messages" id="aiChatMessages">
+                <!-- Mensagem de boas-vindas -->
+                <div class="ai-message ai-message-assistant ai-welcome">
+                    <div class="ai-message-bubble">
+                        <p>Olá! 👋 Sou sua assistente de músicas. Descreva um <strong>tema, versículo, sentimento</strong> ou qualquer ideia, e vou sugerir músicas perfeitas — incluindo as do seu repertório!</p>
+                        <p style="margin-top:8px; font-size:0.8rem; opacity:0.8;">Exemplo: <em>"músicas sobre esperança para encerrar o culto"</em></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div class="ai-chat-input-area">
+                <div class="ai-input-wrapper" id="aiInputWrapper">
+                    <textarea
+                        id="aiChatInput"
+                        class="ai-input"
+                        placeholder="Descreva o tema, sentimento, versículo..."
+                        rows="1"
+                        maxlength="500"
+                    ></textarea>
+                    <button class="ai-send-btn" id="btnAiSend" aria-label="Enviar" disabled>
+                        <i class="ph-fill ph-paper-plane-tilt"></i>
+                    </button>
+                </div>
+                <p class="ai-no-key-warning" id="aiNoKeyWarning" style="display:none;">
+                    <i class="ph ph-warning"></i> Configure a chave da API Gemini no painel Admin para usar a IA.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast de Notificação -->
     <div id="toast" class="toast" aria-live="polite"></div>
 
     <!-- Footer -->
     <footer class="app-footer" id="appFooter">
         <div class="footer-buttons">
+            <!-- Tema: Sol/Lua -->
+            <button class="footer-btn" id="btnThemeToggle" aria-label="Alternar Tema">
+                <i class="ph ph-moon"></i>
+                <span>Tema</span>
+            </button>
+            <!-- Sugestões -->
             <button class="footer-btn" id="btnSugestoes">
                 <i class="ph ph-note-pencil"></i>
                 <span>Sugestões</span>
             </button>
+            <!-- Botão central: Adicionar Música (admin) -->
             <button class="footer-btn footer-btn-center admin-only" id="btnFooterAddSong">
                 <i class="ph ph-plus"></i>
             </button>
+            <!-- IA Busca Inteligente -->
+            <button class="footer-btn" id="btnBibliaIA" aria-label="Busca por IA">
+                <i class="ph ph-sparkle"></i>
+                <span>IA</span>
+            </button>
+            <!-- Mais -->
             <button class="footer-btn" id="btnMais">
                 <i class="ph ph-dots-three"></i>
                 <span>Mais</span>

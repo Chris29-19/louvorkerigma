@@ -1,4 +1,4 @@
-﻿// js/controllers/MainController.js
+// js/controllers/MainController.js
 import { SongModel } from '../models/SongModel.js';
 import { debounce, showToast, normalizeText, fetchLyrics } from '../utils/helpers.js';
 import { dbOperations } from '../db/firebase.js';
@@ -68,6 +68,12 @@ export class MainController {
         this.youtubeApiKeyInput = document.getElementById('youtubeApiKey');
         this.btnSaveYoutubeApiKey = document.getElementById('btnSaveYoutubeApiKey');
         this.youTubeApiKey = '';
+
+        // Gemini AI Key
+        this.geminiApiKeyInput = document.getElementById('geminiApiKey');
+        this.btnSaveGeminiApiKey = document.getElementById('btnSaveGeminiApiKey');
+        this.geminiApiKey = localStorage.getItem('geminiApiKey') || '';
+        this._aiChatHistory = [];
 
         // Identity (Brand Title + Footer)
         this.brandTitleInput = document.getElementById('brandTitleInput');
@@ -549,6 +555,18 @@ export class MainController {
             });
         }
 
+        // Save Gemini API Key
+        if (this.btnSaveGeminiApiKey) {
+            this.btnSaveGeminiApiKey.addEventListener('click', async () => {
+                const key = this.geminiApiKeyInput.value.trim();
+                this.geminiApiKey = key;
+                localStorage.setItem('geminiApiKey', key);
+                await dbOperations.saveSettings({ geminiApiKey: key });
+                showToast(key ? "Chave Gemini salva! IA pronta para uso." : "Chave Gemini removida.");
+                this._updateAiKeyWarning();
+            });
+        }
+
         // Save Identity (Brand Title + Footer)
         if (this.btnSaveIdentity) {
             this.btnSaveIdentity.addEventListener('click', async () => {
@@ -698,6 +716,16 @@ export class MainController {
                 this.youTubeApiKey = settings.youtubeApiKey;
                 if (this.youtubeApiKeyInput) this.youtubeApiKeyInput.value = settings.youtubeApiKey;
             }
+
+            // Load Gemini API Key (also stored locally for speed)
+            if (settings.geminiApiKey) {
+                this.geminiApiKey = settings.geminiApiKey;
+                localStorage.setItem('geminiApiKey', settings.geminiApiKey);
+                if (this.geminiApiKeyInput) this.geminiApiKeyInput.value = settings.geminiApiKey;
+            } else if (this.geminiApiKey && this.geminiApiKeyInput) {
+                // Show what was found in localStorage
+                this.geminiApiKeyInput.value = this.geminiApiKey;
+            }
         } catch (error) {
             console.error("Failed to load settings from Firestore", error);
         }
@@ -729,6 +757,7 @@ export class MainController {
         await this.loadData();
         await this.loadPresets();
         this.bindYouTubeModalEvents();
+        this.bindAiChatEvents();
 
         // Check URL for shared repertório link
         const urlParams = new URLSearchParams(window.location.search);
@@ -885,6 +914,33 @@ export class MainController {
 
     async handleSaveSong(songData) {
         try {
+            // ── Verificação de duplicata (apenas ao CRIAR nova música) ──
+            if (!songData.id) {
+                const allSongs = await SongModel.getAllSongs();
+                const normalizeForDup = str => str
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .trim();
+
+                const titleNorm = normalizeForDup(songData.title || '');
+                const categoryLabel = songData.type === 'adoracao' ? 'Adoração' : 'Louvor';
+
+                const duplicate = allSongs.find(s =>
+                    s.type === songData.type &&
+                    normalizeForDup(s.title || '') === titleNorm
+                );
+
+                if (duplicate) {
+                    const confirmado = confirm(
+                        `⚠️ Música duplicada!\n\n` +
+                        `A música "${duplicate.title}" já existe em ${categoryLabel}.\n\n` +
+                        `Deseja salvar mesmo assim?`
+                    );
+                    if (!confirmado) return;
+                }
+            }
+
             // Auto-fetch lyrics if empty
             if (!songData.lyrics && songData.title && songData.artist) {
                 showToast("Buscando letra automaticamente...", "success");
@@ -1245,15 +1301,20 @@ export class MainController {
             return;
         }
 
-        // Mapeia seção → tipo de música
-        const secaoTipoMap = {
-            'adoracao': 'adoracao',
-            'oferta': 'louvor',
-            'louvor': 'louvor',
-            'pos-palavra': 'adoracao',
-            'ceia': 'adoracao'
-        };
-        const tipoFiltro = secaoTipoMap[secao] || 'louvor';
+        // EBD: sempre mostra apenas Louvor
+        let tipoFiltro;
+        if (dia === 'ebd') {
+            tipoFiltro = 'louvor';
+        } else {
+            const secaoTipoMap = {
+                'adoracao': 'adoracao',
+                'oferta': 'louvor',
+                'louvor': 'louvor',
+                'pos-palavra': 'adoracao',
+                'ceia': 'adoracao'
+            };
+            tipoFiltro = secaoTipoMap[secao] || 'louvor';
+        }
 
         // Filtra músicas por categoria
         const allSongs = await SongModel.getAllSongs();
@@ -1354,14 +1415,19 @@ export class MainController {
     async handleReplaceSongRepertorio(dia, secao, index) {
         if (!this.homeView.currentPeriodo) return;
 
-        const secaoTipoMap = {
-            'adoracao': 'adoracao',
-            'oferta': 'louvor',
-            'louvor': 'louvor',
-            'pos-palavra': 'adoracao',
-            'ceia': 'adoracao'
-        };
-        const tipoFiltro = secaoTipoMap[secao] || 'louvor';
+        let tipoFiltro;
+        if (dia === 'ebd') {
+            tipoFiltro = 'louvor';
+        } else {
+            const secaoTipoMap = {
+                'adoracao': 'adoracao',
+                'oferta': 'louvor',
+                'louvor': 'louvor',
+                'pos-palavra': 'adoracao',
+                'ceia': 'adoracao'
+            };
+            tipoFiltro = secaoTipoMap[secao] || 'louvor';
+        }
 
         const allSongs = await SongModel.getAllSongs();
         const songs = allSongs.filter(s => s.type === tipoFiltro);
@@ -1515,5 +1581,301 @@ export class MainController {
 
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensagem)}`;
         window.open(whatsappUrl, '_blank');
+    }
+
+    // ================================================================
+    //  AI CHAT — Busca Inteligente de Músicas (Gemini)
+    // ================================================================
+
+    _updateAiKeyWarning() {
+        const warn = document.getElementById('aiNoKeyWarning');
+        const sendBtn = document.getElementById('btnAiSend');
+        const input = document.getElementById('aiChatInput');
+        const hasKey = !!this.geminiApiKey;
+        if (warn) warn.style.display = hasKey ? 'none' : 'flex';
+        if (sendBtn) sendBtn.disabled = !hasKey || !(input?.value.trim());
+    }
+
+    bindAiChatEvents() {
+        const modal   = document.getElementById('aiChatModal');
+        const btnOpen = document.getElementById('btnBibliaIA');
+        const btnClose= document.getElementById('btnCloseAiChat');
+        const btnClear= document.getElementById('btnClearAiChat');
+        const input   = document.getElementById('aiChatInput');
+        const sendBtn = document.getElementById('btnAiSend');
+        const chips   = document.querySelectorAll('.ai-chip');
+
+        if (!modal) return;
+
+        // Open
+        if (btnOpen) {
+            btnOpen.addEventListener('click', () => {
+                modal.classList.add('active');
+                this._updateAiKeyWarning();
+                setTimeout(() => input?.focus(), 300);
+            });
+        }
+
+        // Close
+        if (btnClose) btnClose.addEventListener('click', () => modal.classList.remove('active'));
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+
+        // Clear conversation
+        if (btnClear) {
+            btnClear.addEventListener('click', () => {
+                this._aiChatHistory = [];
+                const msgs = document.getElementById('aiChatMessages');
+                if (msgs) msgs.innerHTML = `
+                    <div class="ai-message ai-message-assistant ai-welcome">
+                        <div class="ai-message-bubble">
+                            <p>Conversa reiniciada. 👋 Descreva um <strong>tema, versículo, sentimento</strong> e vou sugerir músicas perfeitas!</p>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // Input auto-resize + enable send
+        if (input) {
+            input.addEventListener('input', () => {
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+                if (sendBtn) sendBtn.disabled = !input.value.trim() || !this.geminiApiKey;
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!sendBtn.disabled) this._sendAiMessage();
+                }
+            });
+        }
+
+        // Send button
+        if (sendBtn) sendBtn.addEventListener('click', () => this._sendAiMessage());
+
+        // Quick chips
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                if (!input) return;
+                input.value = chip.dataset.prompt;
+                input.dispatchEvent(new Event('input'));
+                this._sendAiMessage();
+            });
+        });
+
+        this._updateAiKeyWarning();
+    }
+
+    async _sendAiMessage() {
+        const input   = document.getElementById('aiChatInput');
+        const sendBtn = document.getElementById('btnAiSend');
+        if (!input || !this.geminiApiKey) return;
+
+        const userText = input.value.trim();
+        if (!userText) return;
+
+        // Show user message
+        this._appendMessage('user', userText);
+        input.value = '';
+        input.style.height = 'auto';
+        if (sendBtn) sendBtn.disabled = true;
+
+        // Update status
+        const statusLabel = document.getElementById('aiStatusLabel');
+        if (statusLabel) { statusLabel.textContent = 'Pensando...'; statusLabel.classList.add('thinking'); }
+
+        // Show typing indicator
+        const typingId = this._appendTyping();
+
+        try {
+            // Build song context from local DB
+            const allSongs = await SongModel.getAllSongs();
+            const songContext = allSongs.map(s => {
+                const vocais = (s.vocalConfigs || []).map(v => v.vocalist).filter(Boolean);
+                const tom = s.key || (s.vocalConfigs?.[0]?.key) || '';
+                return `- "${s.title}" | Artista: ${s.artist || 'Desconhecido'} | Categoria: ${
+                    s.type === 'adoracao' ? 'Adoração' : 'Louvor'
+                }${tom ? ` | Tom: ${tom}` : ''}${vocais.length ? ` | Vocalistas: ${vocais.join(', ')}` : ''}${s.lyrics ? ` | Com letra cadastrada` : ''}`;
+            }).join('\n');
+
+            const systemPrompt = `Você é um assistente especializado em músicas de adoração cristã, gospel e louvor brasileiro. 
+Sua função é ajudar líderes de louvor a encontrar músicas ideais para cultos e momentos específicos.
+
+O usuário tem as seguintes músicas cadastradas no repertório do ministério:
+${songContext || '(Nenhuma música cadastrada ainda)'}
+
+Ao responder:
+1. SEMPRE priorize músicas que ESTÃO no repertório do usuário (cite o título exato)
+2. Também sugira até 5 músicas externas populares (gospel/adoração) que combinem com o tema
+3. Para cada música, explique brevemente por que ela combina com o tema
+4. Seja conciso e objetivo
+5. Responda em português do Brasil
+6. Estruture a resposta em JSON com este formato EXATO (não adicione texto fora do JSON):
+{
+  "comment": "Texto introdutório curto explicando a seleção (1-2 frases)",
+  "from_repertoire": [
+    { "title": "Nome da música", "artist": "Artista", "reason": "Motivo curto" }
+  ],
+  "external": [
+    { "title": "Nome da música", "artist": "Artista", "reason": "Motivo curto" }
+  ]
+}`;
+
+            // Build conversation history for Gemini
+            const contents = [
+                ...this._aiChatHistory,
+                { role: 'user', parts: [{ text: userText }] }
+            ];
+
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${this.geminiApiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        system_instruction: { parts: [{ text: systemPrompt }] },
+                        contents,
+                        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err?.error?.message || `HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+            // Save to history
+            this._aiChatHistory.push({ role: 'user', parts: [{ text: userText }] });
+            this._aiChatHistory.push({ role: 'model', parts: [{ text: rawText }] });
+            // Keep history lean (last 10 turns)
+            if (this._aiChatHistory.length > 20) this._aiChatHistory = this._aiChatHistory.slice(-20);
+
+            // Parse JSON response
+            this._removeTyping(typingId);
+            await this._renderAiResponse(rawText, allSongs);
+
+        } catch (err) {
+            this._removeTyping(typingId);
+            console.error('Gemini error:', err);
+            let errMsg = 'Erro ao consultar a IA.';
+            if (err.message?.includes('API_KEY_INVALID') || err.message?.includes('API key')) {
+                errMsg = '🔑 Chave de API inválida. Verifique no painel Admin.';
+            } else if (err.message?.includes('quota') || err.message?.includes('RESOURCE_EXHAUSTED')) {
+                errMsg = '⚠️ Cota da API excedida. Aguarde alguns instantes.';
+            }
+            this._appendMessage('assistant', errMsg);
+        } finally {
+            if (statusLabel) { statusLabel.textContent = 'Pronto para ajudar'; statusLabel.classList.remove('thinking'); }
+            if (sendBtn) sendBtn.disabled = false;
+        }
+    }
+
+    async _renderAiResponse(rawText, allSongs) {
+        // Extract JSON from response (handles markdown code blocks)
+        let parsed = null;
+        try {
+            const match = rawText.match(/```(?:json)?\s*([\s\S]*?)```/) || rawText.match(/({[\s\S]*})/);
+            const jsonStr = match ? match[1] : rawText;
+            parsed = JSON.parse(jsonStr.trim());
+        } catch (e) {
+            // If not valid JSON, show as plain text
+            this._appendMessage('assistant', rawText);
+            return;
+        }
+
+        const msgs = document.getElementById('aiChatMessages');
+        if (!msgs) return;
+
+        const bubble = document.createElement('div');
+        bubble.className = 'ai-message ai-message-assistant';
+
+        const normalizeTitle = t => t?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+        // Build song cards
+        const buildCards = (songs, isLocal) => {
+            return songs.map(s => {
+                // Try to match with local DB
+                const localMatch = allSongs.find(ls => normalizeTitle(ls.title) === normalizeTitle(s.title));
+                const inApp = isLocal && localMatch;
+                return `
+                    <div class="ai-song-card ${inApp ? 'in-repertoire' : ''}">
+                        <div class="ai-song-card-icon">
+                            <i class="ph${inApp ? '-fill' : ''} ph-music-note"></i>
+                        </div>
+                        <div class="ai-song-card-info">
+                            <div class="ai-song-card-title">${this._escHtml(s.title || '')}</div>
+                            <div class="ai-song-card-artist">${this._escHtml(s.artist || '')}${s.reason ? ` · ${this._escHtml(s.reason)}` : ''}</div>
+                        </div>
+                        <span class="ai-song-card-badge ${inApp ? 'badge-in-app' : 'badge-external'}">
+                            ${inApp ? '✓ No app' : 'Externa'}
+                        </span>
+                    </div>`;
+            }).join('');
+        };
+
+        let html = '';
+
+        if (parsed.comment) {
+            html += `<div class="ai-response-text"><p>${this._escHtml(parsed.comment)}</p></div>`;
+        }
+
+        if (parsed.from_repertoire?.length) {
+            html += `<div class="ai-section-label">🎵 Do seu repertório</div>`;
+            html += `<div class="ai-song-cards">${buildCards(parsed.from_repertoire, true)}</div>`;
+        }
+
+        if (parsed.external?.length) {
+            html += `<div class="ai-section-label">🌐 Sugestões externas</div>`;
+            html += `<div class="ai-song-cards">${buildCards(parsed.external, false)}</div>`;
+        }
+
+        if (!parsed.from_repertoire?.length && !parsed.external?.length) {
+            html += `<div class="ai-response-text"><p>${this._escHtml(rawText)}</p></div>`;
+        }
+
+        bubble.innerHTML = `<div class="ai-message-bubble" style="max-width:100%;">${html}</div>`;
+        msgs.appendChild(bubble);
+        bubble.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    _appendMessage(role, text) {
+        const msgs = document.getElementById('aiChatMessages');
+        if (!msgs) return;
+        const div = document.createElement('div');
+        div.className = `ai-message ai-message-${role}`;
+        div.innerHTML = `<div class="ai-message-bubble">${this._escHtml(text).replace(/\n/g, '<br>')}</div>`;
+        msgs.appendChild(div);
+        div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    _appendTyping() {
+        const msgs = document.getElementById('aiChatMessages');
+        if (!msgs) return null;
+        const id = 'typing-' + Date.now();
+        const div = document.createElement('div');
+        div.className = 'ai-message ai-message-assistant';
+        div.id = id;
+        div.innerHTML = `
+            <div class="ai-message-bubble">
+                <div class="ai-typing-bubble">
+                    <div class="ai-typing-dot"></div>
+                    <div class="ai-typing-dot"></div>
+                    <div class="ai-typing-dot"></div>
+                </div>
+            </div>`;
+        msgs.appendChild(div);
+        div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        return id;
+    }
+
+    _removeTyping(id) {
+        if (id) document.getElementById(id)?.remove();
+    }
+
+    _escHtml(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 }

@@ -167,6 +167,17 @@ export class HomeView {
         }
     }
 
+    setThemeIcon(isDark) {
+        if (!this.btnThemeToggle) return;
+        const icon = this.btnThemeToggle.querySelector('i');
+        if (!icon) return;
+        if (isDark) {
+            icon.className = 'ph ph-sun';
+        } else {
+            icon.className = 'ph ph-moon';
+        }
+    }
+
     _updateClearButton(input, searchBar) {
         if (input && searchBar) {
             if (input.value.length > 0) {
@@ -729,6 +740,10 @@ export class HomeView {
             this.toggleCeia.checked = repertorio.domingo?.ceiaAtivo || false;
             this._toggleSecao('ceia', this.toggleCeia.checked);
         }
+
+        // Aplica ordem salva dos kanbans e init drag
+        this._applySavedSectionOrder();
+        this._initSectionDragDrop();
     }
 
     _renderRepertorioList(musicas, container, dia, secao) {
@@ -766,7 +781,7 @@ export class HomeView {
                 vocalSelect = `<span class="rep-meta-text">${this._esc(musica.vocalista || '-')}</span>`;
             }
 
-            const keyOptions = ['C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'];
+            const keyOptions = ['C', 'Cm', 'C#', 'C#m', 'Db', 'Dbm', 'D', 'Dm', 'D#', 'D#m', 'Eb', 'Ebm', 'E', 'Em', 'F', 'Fm', 'F#', 'F#m', 'Gb', 'Gbm', 'G', 'Gm', 'G#', 'G#m', 'Ab', 'Abm', 'A', 'Am', 'A#', 'A#m', 'Bb', 'Bbm', 'B', 'Bm'];
             let tomSelect = `
                 <select class="rep-key-select" data-dia="${dia}" data-secao="${secao}" data-index="${index}">
                     <option value="">Tom</option>
@@ -827,5 +842,137 @@ export class HomeView {
         });
 
         this.currentDia = activeSubTab.replace('subtab-', '');
+    }
+
+    _applySavedSectionOrder() {
+        const subtabIds = ['subtab-quarta', 'subtab-sabado', 'subtab-ebd', 'subtab-domingo'];
+        subtabIds.forEach(tabId => {
+            const panel = document.getElementById(tabId);
+            if (!panel) return;
+            const saved = localStorage.getItem(`sectionOrder_${tabId}`);
+            if (!saved) return;
+            try {
+                const order = JSON.parse(saved);
+                order.forEach(secao => {
+                    const el = panel.querySelector(`.secao-repertorio[data-secao="${secao}"]`);
+                    if (el) panel.appendChild(el);
+                });
+            } catch (e) {}
+        });
+    }
+
+    _saveSectionOrder(panel) {
+        const sections = [...panel.querySelectorAll('.secao-repertorio')].map(el => el.dataset.secao);
+        localStorage.setItem(`sectionOrder_${panel.id}`, JSON.stringify(sections));
+    }
+
+    _initSectionDragDrop() {
+        document.querySelectorAll('.sub-tab-panel').forEach(panel => {
+            const sections = panel.querySelectorAll('.secao-repertorio');
+            let draggedEl = null;
+
+            sections.forEach(section => {
+                const header = section.querySelector('.secao-header');
+                if (!header) return;
+
+                section.setAttribute('draggable', 'false');
+                header.addEventListener('mousedown', () => section.setAttribute('draggable', 'true'));
+
+                section.addEventListener('dragstart', (e) => {
+                    draggedEl = section;
+                    section.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', '');
+                });
+
+                section.addEventListener('dragend', () => {
+                    section.classList.remove('dragging');
+                    section.setAttribute('draggable', 'false');
+                    draggedEl = null;
+                    panel.querySelectorAll('.secao-repertorio').forEach(s => s.classList.remove('drag-over'));
+                    this._saveSectionOrder(panel);
+                });
+
+                section.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                });
+
+                section.addEventListener('dragenter', (e) => {
+                    e.preventDefault();
+                    if (section !== draggedEl) section.classList.add('drag-over');
+                });
+
+                section.addEventListener('dragleave', () => {
+                    section.classList.remove('drag-over');
+                });
+
+                section.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    section.classList.remove('drag-over');
+                    if (draggedEl && draggedEl !== section) {
+                        const allSections = [...panel.querySelectorAll('.secao-repertorio')];
+                        const dragIdx = allSections.indexOf(draggedEl);
+                        const dropIdx = allSections.indexOf(section);
+                        if (dragIdx < dropIdx) {
+                            panel.insertBefore(draggedEl, section.nextSibling);
+                        } else {
+                            panel.insertBefore(draggedEl, section);
+                        }
+                    }
+                });
+
+                // Touch support for mobile
+                let touchClone = null;
+                let touchStartY = 0;
+                let touchSection = null;
+
+                header.addEventListener('touchstart', (e) => {
+                    touchStartY = e.touches[0].clientY;
+                    touchSection = section;
+                    setTimeout(() => {
+                        if (touchSection) touchSection.classList.add('dragging');
+                    }, 150);
+                }, { passive: true });
+
+                header.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    if (!touchSection) return;
+                    const y = e.touches[0].clientY;
+                    const allSections = [...panel.querySelectorAll('.secao-repertorio')];
+                    allSections.forEach(s => s.classList.remove('drag-over'));
+                    const elBelow = document.elementFromPoint(e.touches[0].clientX, y);
+                    if (elBelow) {
+                        const target = elBelow.closest('.secao-repertorio');
+                        if (target && target !== touchSection) {
+                            target.classList.add('drag-over');
+                        }
+                    }
+                }, { passive: false });
+
+                header.addEventListener('touchend', (e) => {
+                    if (!touchSection) return;
+                    touchSection.classList.remove('dragging');
+                    const y = e.changedTouches[0].clientY;
+                    const elBelow = document.elementFromPoint(e.changedTouches[0].clientX, y);
+                    if (elBelow) {
+                        const target = elBelow.closest('.secao-repertorio');
+                        if (target && target !== touchSection) {
+                            const allSections = [...panel.querySelectorAll('.secao-repertorio')];
+                            const dragIdx = allSections.indexOf(touchSection);
+                            const dropIdx = allSections.indexOf(target);
+                            if (dragIdx < dropIdx) {
+                                panel.insertBefore(touchSection, target.nextSibling);
+                            } else {
+                                panel.insertBefore(touchSection, target);
+                            }
+                            this._saveSectionOrder(panel);
+                        }
+                    }
+                    panel.querySelectorAll('.secao-repertorio').forEach(s => s.classList.remove('drag-over'));
+                    touchSection = null;
+                });
+            });
+        });
     }
 }
