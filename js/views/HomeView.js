@@ -167,17 +167,6 @@ export class HomeView {
         }
     }
 
-    setThemeIcon(isDark) {
-        if (!this.btnThemeToggle) return;
-        const icon = this.btnThemeToggle.querySelector('i');
-        if (!icon) return;
-        if (isDark) {
-            icon.className = 'ph ph-sun';
-        } else {
-            icon.className = 'ph ph-moon';
-        }
-    }
-
     _updateClearButton(input, searchBar) {
         if (input && searchBar) {
             if (input.value.length > 0) {
@@ -619,7 +608,7 @@ export class HomeView {
 
     setThemeIcon(isDark) {
         if(this.btnThemeToggle) {
-            this.btnThemeToggle.innerHTML = isDark ? '<i class="ph-fill ph-sun"></i>' : '<i class="ph-fill ph-moon"></i>';
+            this.btnThemeToggle.innerHTML = isDark ? '<i class="ph ph-sun"></i><span>Tema</span>' : '<i class="ph ph-moon"></i><span>Tema</span>';
         }
     }
 

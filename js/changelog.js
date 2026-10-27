@@ -1,6 +1,16 @@
-export const CURRENT_VERSION = '2.30.0';
+export const CURRENT_VERSION = '2.31.1';
 
 export const CHANGELOG = {
+    '2.31.1': [
+        'Botão Tema alinhado aos demais ícones do rodapé',
+        'Rótulo "Tema" restaurado abaixo do ícone sol/lua'
+    ],
+    '2.31.0': [
+        'Chat IA — Busca Inteligente de Músicas (Gemini)',
+        'Botão IA no rodapé',
+        'Botão Tema movido do header para o rodapé',
+        'Seção IA no painel admin para configurar a chave Gemini'
+    ],
     '2.30.0': [
         'Rodapé fixo com botões Sugestões, + e Mais',
         'Enviar sugestões diretamente pelo app',
