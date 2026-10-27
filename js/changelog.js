@@ -1,6 +1,10 @@
-export const CURRENT_VERSION = '2.31.1';
+export const CURRENT_VERSION = '2.31.2';
 
 export const CHANGELOG = {
+    '2.31.2': [
+        'Busca IA corrigida: modelos Gemini atualizados',
+        'Fallback automático entre modelos da IA (mais estabilidade)'
+    ],
     '2.31.1': [
         'Botão Tema alinhado aos demais ícones do rodapé',
         'Rótulo "Tema" restaurado abaixo do ícone sol/lua'
